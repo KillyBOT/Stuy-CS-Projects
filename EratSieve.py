@@ -1,4 +1,4 @@
-import math
+import math, sys
 
 def buildSieve (length):
     retList = []
@@ -6,9 +6,9 @@ def buildSieve (length):
         retList.append(((x+1)*2)+1)
     return retList
 
-def findFirstUnparsed(lst):
+def findFirstUnparsed(lst, lastPrime):
     
-    for x in range(len(lst)):
+    for x in range(lastPrime, len(lst)):
         if lst[x] != 0:
             return x
     return -1
@@ -16,18 +16,8 @@ def findFirstUnparsed(lst):
 def sieveList(lst, n, start):
     place = start
     while place < len(lst):
-        #print(len(lst))
         lst[place] = 0
         place += n
-    #return nLst
-
-def factorial(n):
-    def factRec(total, num):
-        if num <= 0:
-            return total
-        else:
-            return factRec(total*num, num-1)
-    return factRec(n,n-1)
 
 def binarySearch(n):
     def findLarger(currentNum):
@@ -57,14 +47,22 @@ def findNthPrime(n):
     
     currentPrime = 2
     currentPrimePlace = 1
+    lastPrimePlace = 0
     sieve = buildSieve(binarySearch(n))
     while currentPrimePlace < n:
-        currentPrime = sieve[findFirstUnparsed(sieve)]
-        sieveList(sieve,sieve[findFirstUnparsed(sieve)],findFirstUnparsed(sieve))
+        nextPrimePlace = findFirstUnparsed(sieve, lastPrimePlace)
+        currentPrime = sieve[nextPrimePlace]
+        sieveList(sieve,currentPrime,nextPrimePlace)
+        lastPrimePlace = nextPrimePlace
         currentPrimePlace += 1
     return currentPrime
 
-print(findNthPrime(1))
+if __name__ == "__main__":
+    prime = 10
+    if (len(sys.argv)) > 1:
+        prime = int(sys.argv[1])
+
+    print(findNthPrime(prime))
 #testSieve = buildSieve(20)
 #print(testSieve)
 #print (sieveList(testSieve,3)) 
