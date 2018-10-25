@@ -2,9 +2,9 @@ import sys, os
 
 def findUpperBound(num, base):
     currentPow = 0
-    while base ** currentPow < num:
+    while base ** currentPow <= num:
         currentPow += 1
-    return currentPow
+    return currentPow - 1
 
 #Convert from base 10 to any base, at least up to base 16
 def convertTo(num, base):
@@ -32,12 +32,10 @@ def convertFrom(num, base):
         splitNum.append(int(str(num)[x]))
 
     currentPow = len(splitNum)
-    print(splitNum, splitNum[-currentPow])
 
     while currentPow > 0:
         final += splitNum[-currentPow] * (base ** (currentPow - 1))
         currentPow -= 1
-        print(final)
 
     return final
 
