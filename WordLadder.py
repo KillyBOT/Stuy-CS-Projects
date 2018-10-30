@@ -33,24 +33,33 @@ def findDistToGoal(current, end):
 def astar(start, end):
     frontier = [(findDistToGoal(start,end),start)]
     seen = [start]
-    cost = 0
     path = {}
+    costDict = {start: 0}
     current = frontier.pop(0)[1]
     while current != end:
-        cost += 1
         for newWord in findLikeWords(current):
-            #print(newWord)
             if newWord not in seen:
                 seen.append(newWord)
-                frontier.append((findDistToGoal(newWord,end) + cost,newWord))
+                costDict[newWord] = costDict[current] + 1
+                frontier.append((findDistToGoal(newWord,end) + costDict[newWord],newWord))
                 path[newWord] = current
         frontier.sort()
-        #print(frontier)
         current = frontier.pop(0)[1]
-        #print(current,frontier)
-            
 
-#print(findLikeWords("teal"))
-print(findDistToGoal("tall","tail"))
-print(astar("head","tail"))
+    returnPath = []
+    while current != start:
+        returnPath.insert(0,current)
+        current = path[current]
+    returnPath.insert(0,start)
+    return returnPath
     
+if __name__ == "__main__":
+
+    start = "head"
+    end = "tail"
+    
+    if len(sys.argv) > 2:
+        start = str(sys.argv[1])
+        end = str(sys.argv[2])
+
+    print(astar(start,end))
