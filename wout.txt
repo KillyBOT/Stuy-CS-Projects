@@ -1,0 +1,6 @@
+sell,sell,seal,sear,star
+tool,tool,cool,cook,conk,cony
+airy,airy,airs,aims,dims,dies,dyes,dyer
+elms,elms,ells,eels,gels,geld,gold,golf,goof,hoof
+abet,abet,abed,aped,sped,seed,send,sand,sane,save,nave
+axle,axle,able,ably,ally,alls,ails,mils,milk,bilk,bulk,buck

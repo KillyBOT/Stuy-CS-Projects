@@ -2,6 +2,8 @@ import sys,os
 import copy
 
 wordDict = open("dictall.txt","r")
+inputFile = open("wordladder_input.txt","r")
+outFile = open("wout.txt","r+")
 wordList = []
     
 for word in wordDict.readlines():
@@ -34,41 +36,47 @@ def findDistToGoal(current, end):
     return cost
 
 def astar(start, end):
-    frontier = [(findDistToGoal(start,end),start)]
+    frontier = [(findDistToGoal(start,end),start,0)]
     seen = {start}
     path = {}
-    costDict = {start: 0}
-    current = frontier.pop(0)[1]
-    while current != end:
-        for newWord in findLikeWords(current):
+    current = frontier.pop(0)
+    while current[1] != end:
+        for newWord in findLikeWords(current[1]):
             if newWord not in seen:
                 seen = seen | {newWord}
-                costDict[newWord] = costDict[current] + 1
-                frontier.append((findDistToGoal(newWord,end) + costDict[newWord],newWord))
-                path[newWord] = current
+                frontier.append((findDistToGoal(newWord,end) + current[2] + 1,newWord,current[2] + 1))
+                path[newWord] = current[1]
         frontier.sort()
-        current = frontier.pop(0)[1]
+        current = frontier.pop(0)
 
-    returnPath = []
+    current = current[1]
+    returnString = current
     while current != start:
-        returnPath.insert(0,current)
         current = path[current]
-    returnPath.insert(0,start)
-    return returnPath
+        returnString = current + "," + returnString
+    returnString = start + "," + returnString
+    return returnString
     
 if __name__ == "__main__":
 
     start = "head"
     end = "tail"
 
-    otherStart = ["head","five","like","drive"]
-    otherEnd = ["tail","four","flip","sleep"]
-    
+    #otherPair = [["head","tail"],["five","four"],["like","flip"],["drive","sleep"]]
+    pairs = []
     if len(sys.argv) > 2:
         start = str(sys.argv[1])
         end = str(sys.argv[2])
         print(astar(start,end))
     else:
-        for x in range(len(otherStart)):
-            print(astar(otherStart[x],otherEnd[x]))
+        for line in inputFile.readlines():
+            pairs.append(line.split("\n")[0].split(","))
+        print(pairs)
+        for x in range(len(pairs)):
+            outFile.writelines(astar(pairs[x][0],pairs[x][1]))
+            outFile.write("\n")
+        outFile.read()
+        wordDict.close()
+        inputFile.close()
+        outFile.close()
     
