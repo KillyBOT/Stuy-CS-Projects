@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys, os
 import random
+from tkinter import *
 
 #Up is 1st place
 #Right is 2nd place
@@ -27,6 +28,13 @@ prD = {
 
 testMaze = []
 mazeSize = 15
+mazeBoxSize = 32
+
+window = Tk()
+window.title("Random Maze")
+
+cv = Canvas(window, width=mazeSize*mazeBoxSize, height=mazeSize*mazeBoxSize)
+cv.pack()
 
 def createEmptyMaze(size):
     returnMaze = []
@@ -39,15 +47,15 @@ def createEmptyMaze(size):
                 toAdd[pD["l"]] = None
             elif column >= size-1:
                 toAdd[pD["r"]] = None
-                
+
             if row == 0:
                 toAdd[pD["u"]] = None
             elif row >= size-1:
                 toAdd[pD["d"]] = None
-                
+
             rowToAdd.append(toAdd)
         returnMaze.append(rowToAdd)
-        
+
     return returnMaze
 
 def printMaze(maze):
@@ -72,7 +80,7 @@ def findUnseenRoutes(pos,maze):
     for direction in directions:
         dirAddX = pos[0] + dD[direction][0]
         dirAddY = pos[1] + dD[direction][1]
-        if dirAddX > 0 and dirAddX < len(maze)-1 and dirAddY > 0 and dirAddY < len(maze)-1:
+        if dirAddX >= 0 and dirAddX < len(maze) and dirAddY >= 0 and dirAddY < len(maze):
             placeToCheck = maze[dirAddX][dirAddY]
             if place[pD[direction]] == False and placeToCheck[pD[prD[direction]]] == False:
                 retList.append(direction)
@@ -85,17 +93,34 @@ def buildMaze(maze, startPos, endPos):
         if len(findUnseenRoutes(currentPos,maze)) <= 0 or currentPos == endPos:
             frontier.pop(0)
             #printMaze(maze)
+            #print(frontier)
+            #return 0
+            #printMaze(maze)
         else:
             placeToGo = random.choice(findUnseenRoutes(currentPos,maze))
             direction = dD[placeToGo]
             nextPos = [currentPos[0] + direction[0],currentPos[1] + direction[1]]
+            #print(currentPos[0],currentPos[1],nextPos[0],nextPos[1])
             maze[currentPos[0]][currentPos[1]][pD[placeToGo]] = True
-            maze[nextPos[0]][nextPos[1]][pD[prD[placeToGo]]] = True
+            #maze[nextPos[0]][nextPos[1]][pD[prD[placeToGo]]] = True
             frontier.insert(0, nextPos)
-    
+
+def displayMaze(maze, c):
+    c.create_rectangle(0,0,mazeSize*mazeBoxSize,mazeSize*mazeBoxSize,fill="#000000")
+    for row in range(mazeSize):
+        for column in range(mazeSize):
+            if maze[row][column][pD["u"]] == True:
+                print((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize),(row*mazeBoxSize)+(3*mazeBoxSize)/4,(column*mazeBoxSize)+mazeBoxSize/2)
+                c.create_rectangle((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize),(column*mazeBoxSize)+(3*mazeBoxSize)/4,(row*mazeBoxSize)+mazeBoxSize/2,fill="#ffffff")
+            if maze[row][column][pD["d"]] == True:
+                print((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize),(row*mazeBoxSize)+(3*mazeBoxSize)/4,(column*mazeBoxSize)+mazeBoxSize/2)
+                c.create_rectangle((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize)+mazeBoxSize/4,(column*mazeBoxSize)+(3*mazeBoxSize)/4,(row*mazeBoxSize)+mazeBoxSize/2,fill="#ffffff")
+
 testMaze = createEmptyMaze(mazeSize)
 
-printMaze(testMaze)
+#printMaze(testMaze)
 #print(findUnseenRoutes([0,0],testMaze))
 buildMaze(testMaze, [mazeSize-1,mazeSize-2], [0,1])
 printMaze(testMaze)
+displayMaze(testMaze,cv)
+window.mainloop()
