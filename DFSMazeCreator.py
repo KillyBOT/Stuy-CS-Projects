@@ -68,14 +68,14 @@ def printMaze(maze):
 def findUnseenRoutes(pos,maze):
     place = maze[pos[0]][pos[1]]
     retList = []
-    if place[pD["u"]] == False:
-        retList.append("u")
-    if place[pD["d"]] == False:
-        retList.append("d")
-    if place[pD["l"]] == False:
-        retList.append("l")
-    if place[pD["r"]] == False:
-        retList.append("r")
+    directions = list("udlr")
+    for direction in directions:
+        dirAddX = pos[0] + dD[direction][0]
+        dirAddY = pos[1] + dD[direction][1]
+        if dirAddX > 0 and dirAddX < len(maze)-1 and dirAddY > 0 and dirAddY < len(maze)-1:
+            placeToCheck = maze[dirAddX][dirAddY]
+            if place[pD[direction]] == False and placeToCheck[pD[prD[direction]]] == False:
+                retList.append(direction)
     return retList
 
 def buildMaze(maze, startPos, endPos):
@@ -96,5 +96,6 @@ def buildMaze(maze, startPos, endPos):
 testMaze = createEmptyMaze(mazeSize)
 
 printMaze(testMaze)
+#print(findUnseenRoutes([0,0],testMaze))
 buildMaze(testMaze, [mazeSize-1,mazeSize-2], [0,1])
 printMaze(testMaze)
