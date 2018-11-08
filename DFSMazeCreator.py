@@ -15,6 +15,13 @@ pD = {
       "d":2,
       "l":3}
 
+pvrD = {
+0:"u",
+1:"r",
+2:"d",
+3:"l"
+}
+
 dD = {
       "u":[-1,0],
       "r":[0,1],
@@ -26,9 +33,16 @@ prD = {
       "l":"r",
       "r":"l"}
 
+drawOffsets = {
+"u":[0.25,0,0.75,0.75],
+"d":[0.25,0.25,0.75,1],
+"l":[0,0.25,0.75,0.75],
+"r":[0.25,0.25,1,0.75]
+}
+
 testMaze = []
-mazeSize = 15
-mazeBoxSize = 32
+mazeSize = 32
+mazeBoxSize = 16
 
 window = Tk()
 window.title("Random Maze")
@@ -73,54 +87,72 @@ def printMaze(maze):
             print(" ", end="")
         print("")
 
-def findUnseenRoutes(pos,maze):
+def findUnseenRoutes(pos,maze,seen):
     place = maze[pos[0]][pos[1]]
     retList = []
-    directions = list("udlr")
+    directions = list("urdl")
     for direction in directions:
         dirAddX = pos[0] + dD[direction][0]
         dirAddY = pos[1] + dD[direction][1]
         if dirAddX >= 0 and dirAddX < len(maze) and dirAddY >= 0 and dirAddY < len(maze):
             placeToCheck = maze[dirAddX][dirAddY]
-            if place[pD[direction]] == False and placeToCheck[pD[prD[direction]]] == False:
+            if place[pD[direction]] == False and placeToCheck[pD[prD[direction]]] == False and (dirAddX, dirAddY) not in seen:
                 retList.append(direction)
     return retList
 
 def buildMaze(maze, startPos, endPos):
     frontier = [startPos]
+    seen = {tuple(startPos)}
     while len(frontier) > 0:
         currentPos = frontier[0]
-        if len(findUnseenRoutes(currentPos,maze)) <= 0 or currentPos == endPos:
+        seen = seen | {tuple(currentPos)}
+        if len(findUnseenRoutes(currentPos,maze,seen)) <= 0 or currentPos == endPos:
             frontier.pop(0)
             #printMaze(maze)
-            #print(frontier)
             #return 0
-            #printMaze(maze)
         else:
-            placeToGo = random.choice(findUnseenRoutes(currentPos,maze))
+            #print(findUnseenRoutes(currentPos,maze))
+            placeToGo = random.choice(findUnseenRoutes(currentPos,maze,seen))
             direction = dD[placeToGo]
             nextPos = [currentPos[0] + direction[0],currentPos[1] + direction[1]]
-            #print(currentPos[0],currentPos[1],nextPos[0],nextPos[1])
+            print(currentPos,nextPos,pD[prD[placeToGo]])
             maze[currentPos[0]][currentPos[1]][pD[placeToGo]] = True
-            #maze[nextPos[0]][nextPos[1]][pD[prD[placeToGo]]] = True
+            maze[nextPos[0]][nextPos[1]][pD[prD[placeToGo]]] = True
             frontier.insert(0, nextPos)
 
-def displayMaze(maze, c):
+def displayMaze(maze, c, start, end):
     c.create_rectangle(0,0,mazeSize*mazeBoxSize,mazeSize*mazeBoxSize,fill="#000000")
     for row in range(mazeSize):
         for column in range(mazeSize):
-            if maze[row][column][pD["u"]] == True:
-                print((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize),(row*mazeBoxSize)+(3*mazeBoxSize)/4,(column*mazeBoxSize)+mazeBoxSize/2)
-                c.create_rectangle((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize),(column*mazeBoxSize)+(3*mazeBoxSize)/4,(row*mazeBoxSize)+mazeBoxSize/2,fill="#ffffff")
-            if maze[row][column][pD["d"]] == True:
-                print((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize),(row*mazeBoxSize)+(3*mazeBoxSize)/4,(column*mazeBoxSize)+mazeBoxSize/2)
-                c.create_rectangle((column*mazeBoxSize)+mazeBoxSize/4,(row*mazeBoxSize)+mazeBoxSize/4,(column*mazeBoxSize)+(3*mazeBoxSize)/4,(row*mazeBoxSize)+mazeBoxSize/2,fill="#ffffff")
+            for directions in range(4):
+                if maze[row][column][directions] == True:
+                    fillColor = "#ffffff"
+                    if [row,column] == start:
+                        fillColor = '#ff0000'
+                    elif [row,column] == end:
+                        fillColor = '#0000ff'
+                    c.create_rectangle(
+                    (column*mazeBoxSize)+(mazeBoxSize*drawOffsets[pvrD[directions]][0]),
+                    (row*mazeBoxSize)+(mazeBoxSize*drawOffsets[pvrD[directions]][1]),
+                    (column*mazeBoxSize)+(mazeBoxSize*drawOffsets[pvrD[directions]][2]),
+                    (row*mazeBoxSize)+(mazeBoxSize*drawOffsets[pvrD[directions]][3]),
+                    fill=fillColor,
+                    width=0)
 
 testMaze = createEmptyMaze(mazeSize)
 
+mazeStart = [mazeSize-2,mazeSize-1]
+mazeEnd = [1,0]
+
 #printMaze(testMaze)
 #print(findUnseenRoutes([0,0],testMaze))
-buildMaze(testMaze, [mazeSize-1,mazeSize-2], [0,1])
-printMaze(testMaze)
-displayMaze(testMaze,cv)
-window.mainloop()
+
+if __name__ == "__main__":
+    #if len(sys.argv) > 1:
+#        mazeSize = int(sys.argv[1])
+#        mazeBoxSize = mazeSize/2
+
+    buildMaze(testMaze, mazeStart, mazeEnd)
+    printMaze(testMaze)
+    displayMaze(testMaze,cv, mazeStart, mazeEnd)
+    window.mainloop()
