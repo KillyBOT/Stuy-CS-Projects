@@ -9,12 +9,14 @@ from tkinter import *
 #Left is 4th place
 #Think NESW
 
+#This means placement dictionary
 pD = {
       "u":0,
       "r":1,
       "d":2,
       "l":3}
 
+#This means values placement dictionary
 pvrD = {
 0:"u",
 1:"r",
@@ -22,17 +24,21 @@ pvrD = {
 3:"l"
 }
 
+#This is the direction dictionary. It tells what way to move given a letter
 dD = {
       "u":[-1,0],
       "r":[0,1],
       "d":[1,0],
       "l":[0,-1]}
+
+#This is the reverse direction
 prD = {
       "u":"d",
       "d":"u",
       "l":"r",
       "r":"l"}
 
+#These are the drawing offsets
 drawOffsets = {
 "u":[0.25,0,0.75,0.75],
 "d":[0.25,0.25,0.75,1],
@@ -41,8 +47,8 @@ drawOffsets = {
 }
 
 testMaze = []
-mazeSize = 32
-mazeBoxSize = 16
+mazeSize = 64
+mazeBoxSize = 10
 
 window = Tk()
 window.title("Random Maze")
@@ -108,17 +114,19 @@ def buildMaze(maze, startPos, endPos):
         seen = seen | {tuple(currentPos)}
         if len(findUnseenRoutes(currentPos,maze,seen)) <= 0 or currentPos == endPos:
             frontier.pop(0)
-            #printMaze(maze)
-            #return 0
         else:
-            #print(findUnseenRoutes(currentPos,maze))
             placeToGo = random.choice(findUnseenRoutes(currentPos,maze,seen))
             direction = dD[placeToGo]
             nextPos = [currentPos[0] + direction[0],currentPos[1] + direction[1]]
-            print(currentPos,nextPos,pD[prD[placeToGo]])
             maze[currentPos[0]][currentPos[1]][pD[placeToGo]] = True
             maze[nextPos[0]][nextPos[1]][pD[prD[placeToGo]]] = True
             frontier.insert(0, nextPos)
+    for walls in range(len(maze[startPos[0]][startPos[1]])):
+        if maze[startPos[0]][startPos[1]][walls] == None:
+            maze[startPos[0]][startPos[1]][walls] = True
+        if maze[endPos[0]][endPos[1]][walls] == None:
+            maze[endPos[0]][endPos[1]][walls] = True
+    
 
 def displayMaze(maze, c, start, end):
     c.create_rectangle(0,0,mazeSize*mazeBoxSize,mazeSize*mazeBoxSize,fill="#000000")
@@ -144,15 +152,11 @@ testMaze = createEmptyMaze(mazeSize)
 mazeStart = [mazeSize-2,mazeSize-1]
 mazeEnd = [1,0]
 
-#printMaze(testMaze)
-#print(findUnseenRoutes([0,0],testMaze))
-
 if __name__ == "__main__":
-    #if len(sys.argv) > 1:
-#        mazeSize = int(sys.argv[1])
-#        mazeBoxSize = mazeSize/2
+    if len(sys.argv) > 2:
+        mazeSize = int(sys.argv[1])
+        mazeBoxSize = int(sys.argv[2])
 
     buildMaze(testMaze, mazeStart, mazeEnd)
-    printMaze(testMaze)
     displayMaze(testMaze,cv, mazeStart, mazeEnd)
     window.mainloop()
