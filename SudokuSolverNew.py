@@ -153,11 +153,10 @@ def solveBoard(board, solvedBoard):
     currentBoard = copy.deepcopy(board)
     timesBacktracked = 0
 
-    while currentBoard != solvedBoard:
+    while currentBoard != solvedBoard and len(findEmpty(currentBoard)) > 0:
         moves = findMoves(currentBoard)
         if len(moves) <= 0:
             timesBacktracked += 1
-            currentBoard = frontier.pop(0)
         else:
             while anyForced(currentBoard):
                 for move in moves:
@@ -165,15 +164,14 @@ def solveBoard(board, solvedBoard):
                         currentBoard = doMove(currentBoard, moves[move][0], move[0], move[1])
                 moves = findMoves(currentBoard)
                 
-            if currentBoard == solvedBoard:
+            if currentBoard == solvedBoard or len(findEmpty(currentBoard)) == 0:
                 break
             
             firstEmpty = findFirstEmpty(currentBoard)
             if firstEmpty in moves:
                 for move in moves[firstEmpty]:
-                    if checkMove(currentBoard, move, firstEmpty[0], firstEmpty[1]):
-                        frontier.append(doMove(currentBoard, move, firstEmpty[0], firstEmpty[1]))
-            currentBoard = frontier.pop(0)
+                    frontier.insert(0, doMove(currentBoard, move, firstEmpty[0], firstEmpty[1]))
+        currentBoard = frontier.pop(0)
     print(timesBacktracked)
     return currentBoard
 
@@ -185,17 +183,18 @@ if __name__ == "__main__":
     else:
         sIn = open("Sudoku-boards.txt","r")
         out = open("s-1.txt","w")
-        startPoint = "name,Hard-NYTimes,unsolved"
-    #sudokuIn.readline()
+        startPoint = "name,WebSudoku-Evil,unsolved"
     endPoint = startPoint.replace("unsolved","solved")
+    
     sudokuInList = []
     for line in sIn.readlines():
         if line != "\n":
             sudokuInList.append(line.split("\n")[0])
-    #print(startPoint)
+            
     board = boardToTuple(findBoard(sudokuInList,startPoint))
     endBoard = boardToTuple(findBoard(sudokuInList,endPoint))
     solvedBoard = tupToBoard(solveBoard(board, endBoard))
+    
     out.write(endPoint)
     for row in solvedBoard:
         rowString = []
