@@ -1,11 +1,12 @@
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Nov  8 16:19:56 2018
-
 @author: edwar
 """
 
-import sys, copy
+import sys
+import copy
 
 sIn = None
 out = None
@@ -51,21 +52,21 @@ for row in range(9):
             for num in clique:
                 if (row * 9) + column == num:
                     cliqueDict[(row,column)].append(clique)
-    
+
 def printBoard(board):
     for row in range(9):
         for column in range(9):
             print(board[(row * 9) + column],end=" ")
         print("")
     print("")
-        
+
 def findBoard(rawIn, boardName):
     position = 0
     for line in rawIn:
         if line == boardName:
             break
         position += 1
-        
+
     returnList = []
     for row in rawIn[position+1:position+10]:
         toInsert = []
@@ -76,10 +77,14 @@ def findBoard(rawIn, boardName):
                 else:
                     toInsert.append(int(num))
         returnList.append(toInsert)
-        
+
     return returnList
 
 def checkMove(board, num, row, column):
+
+    if board[(row * 9) + column] != 0:
+        return False
+
     for clique in cliqueDict[(row,column)]:
         for nums in clique:
             if num == board[nums]:
@@ -91,7 +96,7 @@ def boardToTuple(board):
     for row in board:
         for column in row:
             returnTup.append(column)
-            
+
     return tuple(returnTup)
 
 def tupToBoard(tup):
@@ -101,10 +106,10 @@ def tupToBoard(tup):
         for column in range(9):
             toAdd.append(tup[(row * 9)+column])
         returnBoard.append(toAdd)
-        
+
     return returnBoard
 
-def doMove(board, num, row, column):       
+def doMove(board, num, row, column):
     newBoard = list(copy.deepcopy(board))
     newBoard[(row * 9) + column] = num
     return tuple(newBoard)
@@ -113,7 +118,7 @@ def findFirstEmpty(board):
     for num in range(len(board)):
         if board[num] == 0:
             return (num // 9, num % 9)
-        
+
     return False
 
 def findEmpty(board):
@@ -121,7 +126,7 @@ def findEmpty(board):
     for num in range(len(board)):
         if board[num] == 0:
             emptySpots.append((num // 9, num % 9))
-        
+
     return emptySpots
 
 def anyForced(board):
@@ -145,15 +150,29 @@ def findMoves(board):
                 movesToAdd.append(num)
         if len(movesToAdd) > 0:
             moves[empty] = movesToAdd
-        
+
     return moves
+
+def checkValidity(board):
+    for num in range(1,10):
+        for row in range(9):
+            for column in range(9):
+                if board[(row * 9) + column] == 0:
+                    return False
+                for clique in cliqueDict[(row, column)]:
+                    timesNumSeen = 0
+                    for currentNum in clique:
+                        if num == board[currentNum]:
+                            timesNumSeen += 1
+                    if timesNumSeen != 1:
+                        return False
+    return True
 
 def solveBoard(board, solvedBoard):
     frontier = []
     currentBoard = copy.deepcopy(board)
     timesBacktracked = 0
-
-    while currentBoard != solvedBoard and len(findEmpty(currentBoard)) > 0:
+    while checkValidity(currentBoard) == False:
         moves = findMoves(currentBoard)
         if len(moves) <= 0:
             timesBacktracked += 1
@@ -163,14 +182,14 @@ def solveBoard(board, solvedBoard):
                     if len(moves[move]) == 1:
                         currentBoard = doMove(currentBoard, moves[move][0], move[0], move[1])
                 moves = findMoves(currentBoard)
-                
-            if currentBoard == solvedBoard or len(findEmpty(currentBoard)) == 0:
+            moves = findMoves(currentBoard)
+            if checkValidity(currentBoard):
                 break
-            
+
             firstEmpty = findFirstEmpty(currentBoard)
             if firstEmpty in moves:
                 for move in moves[firstEmpty]:
-                    frontier.insert(0, doMove(currentBoard, move, firstEmpty[0], firstEmpty[1]))
+                    frontier.append(doMove(currentBoard, move, firstEmpty[0], firstEmpty[1]))
         currentBoard = frontier.pop(0)
     print(timesBacktracked)
     return currentBoard
@@ -183,23 +202,23 @@ if __name__ == "__main__":
     else:
         sIn = open("Sudoku-boards.txt","r")
         out = open("s-1.txt","w")
-        startPoint = "name,WebSudoku-Evil,unsolved"
+        startPoint = "name,WebSudoku-Hard,unsolved"
     endPoint = startPoint.replace("unsolved","solved")
-    
+
     sudokuInList = []
     for line in sIn.readlines():
         if line != "\n":
             sudokuInList.append(line.split("\n")[0])
-            
+
     board = boardToTuple(findBoard(sudokuInList,startPoint))
     endBoard = boardToTuple(findBoard(sudokuInList,endPoint))
     solvedBoard = tupToBoard(solveBoard(board, endBoard))
-    
-    out.write(endPoint)
+
+    out.write(endPoint + "\n")
     for row in solvedBoard:
         rowString = []
         for num in row:
             rowString.append(str(num))
-        out.write(",".join(rowString))
+        out.write(",".join(rowString) + "\n")
     sIn.close()
-    out.close()
+out.close()
