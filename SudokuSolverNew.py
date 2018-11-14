@@ -122,32 +122,59 @@ def findEmpty(board):
         if board[num] == 0:
             emptySpots.append((num // 9, num % 9))
         
-    if len(emptySpots) > 0:
-        return emptySpots
+    return emptySpots
+
+def anyForced(board):
+    for empty in findEmpty(board):
+        possibleNums = 0
+        for num in range(1,10):
+            if checkMove(board, num, empty[0], empty[1]):
+                possibleNums += 1
+        if possibleNums == 1:
+            return True
     return False
 
+def findMoves(board):
+    moves = {}
+    if findEmpty(board) == False:
+        return moves
+    for empty in findEmpty(board):
+        movesToAdd = []
+        for num in range(1,10):
+            if checkMove(board, num, empty[0], empty[1]):
+                movesToAdd.append(num)
+        if len(movesToAdd) > 0:
+            moves[empty] = movesToAdd
+        
+    return moves
+
 def solveBoard(board, solvedBoard):
-    frontier = [copy.deepcopy(board)]
-    currentBoard = copy.deepcopy(frontier.pop(0))
-    seenBoards = {copy.deepcopy(currentBoard)}
-    while findEmpty(currentBoard) != False or currentBoard != solvedBoard:
-        nextOpen = findFirstEmpty(currentBoard)
-        possibleMoves = []
-        for nextOpen in findEmpty(currentBoard):
-            for num in range(1,10):
-                if checkMove(currentBoard, num, nextOpen[0], nextOpen[1]):
-                    possibleMoves.append((num, nextOpen[0], nextOpen[1]))
-                        
-        if len(possibleMoves) <= 0:
-            frontier.pop(0)
+    frontier = []
+    currentBoard = copy.deepcopy(board)
+    timesBacktracked = 0
+
+    while currentBoard != solvedBoard:
+        moves = findMoves(currentBoard)
+        if len(moves) <= 0:
+            timesBacktracked += 1
+            currentBoard = frontier.pop(0)
         else:
-            for move in possibleMoves:
-                if doMove(currentBoard, move[0], move[1], move[2]) not in seenBoards:
-                    moveToDo = doMove(currentBoard, move[0], move[1], move[2])
-                    seenBoards = seenBoards | {moveToDo}
-                    frontier.insert(0,moveToDo)
-        currentBoard = copy.deepcopy(frontier.pop(0))
+            while anyForced(currentBoard):
+                for move in moves:
+                    if len(moves[move]) == 1:
+                        currentBoard = doMove(currentBoard, moves[move][0], move[0], move[1])
+                moves = findMoves(currentBoard)
                 
+            if currentBoard == solvedBoard:
+                break
+            
+            firstEmpty = findFirstEmpty(currentBoard)
+            if firstEmpty in moves:
+                for move in moves[firstEmpty]:
+                    if checkMove(currentBoard, move, firstEmpty[0], firstEmpty[1]):
+                        frontier.append(doMove(currentBoard, move, firstEmpty[0], firstEmpty[1]))
+            currentBoard = frontier.pop(0)
+    print(timesBacktracked)
     return currentBoard
 
 if __name__ == "__main__":
@@ -158,7 +185,7 @@ if __name__ == "__main__":
     else:
         sIn = open("Sudoku-boards.txt","r")
         out = open("s-1.txt","w")
-        startPoint = "name,Easy-NYTimes,unsolved"
+        startPoint = "name,Hard-NYTimes,unsolved"
     #sudokuIn.readline()
     endPoint = startPoint.replace("unsolved","solved")
     sudokuInList = []
@@ -168,10 +195,12 @@ if __name__ == "__main__":
     #print(startPoint)
     board = boardToTuple(findBoard(sudokuInList,startPoint))
     endBoard = boardToTuple(findBoard(sudokuInList,endPoint))
-    printBoard(solveBoard(board, endBoard))
     solvedBoard = tupToBoard(solveBoard(board, endBoard))
     out.write(endPoint)
     for row in solvedBoard:
-        out.write(row)
+        rowString = []
+        for num in row:
+            rowString.append(str(num))
+        out.write(",".join(rowString))
     sIn.close()
     out.close()
