@@ -110,7 +110,7 @@ def tupToBoard(tup):
     return returnBoard
 
 def doMove(board, num, row, column):
-    newBoard = list(copy.deepcopy(board))
+    newBoard = list(board)
     newBoard[(row * 9) + column] = num
     return tuple(newBoard)
 
@@ -170,7 +170,7 @@ def checkValidity(board):
 
 def solveBoard(board, solvedBoard):
     frontier = []
-    currentBoard = copy.deepcopy(board)
+    currentBoard = board
     timesBacktracked = 0
     while checkValidity(currentBoard) == False:
         moves = findMoves(currentBoard)
@@ -182,15 +182,22 @@ def solveBoard(board, solvedBoard):
                     if len(moves[move]) == 1:
                         currentBoard = doMove(currentBoard, moves[move][0], move[0], move[1])
                 moves = findMoves(currentBoard)
-            moves = findMoves(currentBoard)
             if checkValidity(currentBoard):
                 break
 
-            firstEmpty = findFirstEmpty(currentBoard)
-            if firstEmpty in moves:
-                for move in moves[firstEmpty]:
-                    frontier.append(doMove(currentBoard, move, firstEmpty[0], firstEmpty[1]))
+            allEmpty = findEmpty(currentBoard)
+            emptySpots = []
+            for empty in allEmpty:
+                if empty in moves:
+                    emptySpots.append((len(moves[empty]),empty))
+
+            emptySpots.sort()
+            if len(emptySpots) > 0:
+                for move in moves[emptySpots[0][1]]:
+                    frontier.insert(0,doMove(currentBoard, move, emptySpots[0][1][0], emptySpots[0][1][1]))
+
         currentBoard = frontier.pop(0)
+        #break
     print(timesBacktracked)
     return currentBoard
 
