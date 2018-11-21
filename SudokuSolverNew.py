@@ -44,6 +44,7 @@ cliques=[[0,1,2,3,4,5,6,7,8],
 [60,61,62,69,70,71,78,79,80]]
 
 cliqueDict = {}
+cliqueDictTuple = {}
 
 for row in range(9):
     for column in range(9):
@@ -52,6 +53,13 @@ for row in range(9):
             for num in clique:
                 if (row * 9) + column == num:
                     cliqueDict[(row,column)].append(clique)
+
+for num in range(81):
+    cliqueDictTuple[num] = []
+    for clique in cliques:
+        for item in clique:
+            if item == num:
+                cliqueDictTuple[num].append(clique)
 
 def printBoard(board):
     for row in range(9):
@@ -129,6 +137,14 @@ def findEmpty(board):
 
     return emptySpots
 
+def findEmptyTuple(board):
+    empties = []
+    for num in range(len(board)):
+        if board[num] == 0:
+            empties.append(num)
+
+    return empties
+
 def anyForced(board):
     for empty in findEmpty(board):
         possibleNums = 0
@@ -141,15 +157,66 @@ def anyForced(board):
 
 def findMoves(board):
     moves = {}
-    if findEmpty(board) == False:
-        return moves
-    for empty in findEmpty(board):
-        movesToAdd = []
-        for num in range(1,10):
-            if checkMove(board, num, empty[0], empty[1]):
-                movesToAdd.append(num)
-        if len(movesToAdd) > 0:
-            moves[empty] = movesToAdd
+    if findEmpty(board) != False:
+        for empty in findEmpty(board):
+            movesToAdd = []
+            for num in range(1,10):
+                if checkMove(board, num, empty[0], empty[1]):
+                    movesToAdd.append(num)
+            if len(movesToAdd) > 0:
+                moves[empty] = movesToAdd
+
+    return moves
+
+def findMovesTuple(board):
+    moves = {}
+    empties = findEmptyTuple(board)
+    if not empties:
+        for empty in empties:
+            movesToAdd = []
+            for num in range(1,10):
+                if checkMove(board, num, empty // 9, empty % 9):
+                    movesToAdd.append(num)
+            if len(movesToAdd) != 0:
+                moves[empty] = movesToAdd
+    return moves
+
+def findMovesClique(board, clique):
+    moves = {}
+    for cliquePos in clique:
+        toAppend = []
+        if board[cliquePos] == 0:
+            for num in range(1,10):
+                if checkMove(board, num, cliquePos // 9, cliquePos % 9):
+                    toAppend.append(num)
+        if len(toAppend) > 0:
+            moves[(cliquePos // 9, cliquePos % 9)] = toAppend
+
+    #print(moves)
+    for move in moves:
+        if len(moves[move]) > 0:
+            anyNakeds = False
+            numOfNakeds = 0
+            for otherMoves in moves:
+                if moves[otherMoves] != moves[move] and set(moves[move]).issubset(set(moves[otherMoves])):
+                    anyNakeds = True
+                    #print(set(moves[move]), set(moves[otherMoves]), set(moves[move]).issubset(set(moves[otherMoves])))
+                elif moves[otherMoves] == moves[move] and otherMoves != move:
+                    #print(move, otherMoves, moves[move], moves[otherMoves])
+                    numOfNakeds += 1
+            if anyNakeds and numOfNakeds == 1:
+                for otherMoves in moves:
+                    if moves[otherMoves] != moves[move]:
+                        moves[otherMoves] = list(set(moves[otherMoves]).difference(set(moves[move])))
+                #print(clique, moves,end="\n\n")
+
+    return moves
+
+def findMovesCliques(board):
+    empties = findEmpty(board)
+    moves = {}
+    for clique in cliques:
+        moves.update(findMovesClique(board,clique))
 
     return moves
 
@@ -168,12 +235,20 @@ def checkValidity(board):
                         return False
     return True
 
+def findEmptyMoves(board, moves):
+    retMoves = []
+    for empty in findEmpty(board):
+        if empty in moves:
+            retMoves.append(empty)
+
+    return retMoves
+
 def solveBoard(board, solvedBoard):
     frontier = []
     currentBoard = board
     timesBacktracked = 0
     while checkValidity(currentBoard) == False:
-        moves = findMoves(currentBoard)
+        moves = findMovesCliques(currentBoard)
         if len(moves) <= 0:
             timesBacktracked += 1
         else:
@@ -181,20 +256,15 @@ def solveBoard(board, solvedBoard):
                 for move in moves:
                     if len(moves[move]) == 1:
                         currentBoard = doMove(currentBoard, moves[move][0], move[0], move[1])
-                moves = findMoves(currentBoard)
+                moves = findMovesCliques(currentBoard)
             if checkValidity(currentBoard):
                 break
 
-            allEmpty = findEmpty(currentBoard)
-            emptySpots = []
-            for empty in allEmpty:
-                if empty in moves:
-                    emptySpots.append((len(moves[empty]),empty))
-
-            emptySpots.sort()
-            if len(emptySpots) > 0:
-                for move in moves[emptySpots[0][1]]:
-                    frontier.insert(0,doMove(currentBoard, move, emptySpots[0][1][0], emptySpots[0][1][1]))
+            allEmpty = findEmptyMoves(currentBoard, moves)
+            if len(allEmpty) > 0:
+                spotToDo = min(allEmpty, key= lambda k: len(k))
+                for move in moves[spotToDo]:
+                    frontier.insert(0,doMove(currentBoard, move, spotToDo[0], spotToDo[1]))
 
         currentBoard = frontier.pop(0)
         #break
@@ -209,7 +279,7 @@ if __name__ == "__main__":
     else:
         sIn = open("Sudoku-boards.txt","r")
         out = open("s-1.txt","w")
-        startPoint = "name,WebSudoku-Hard,unsolved"
+        startPoint = "name,Hard-NYTimes,unsolved"
     endPoint = startPoint.replace("unsolved","solved")
 
     sudokuInList = []
