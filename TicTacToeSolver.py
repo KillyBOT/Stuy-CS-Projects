@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Nov 28 23:41:53 2018
+
+@author: edwar
+"""
+
 cliques = [(0,1,2),
 (3,4,5),
 (6,7,8),
@@ -6,6 +13,13 @@ cliques = [(0,1,2),
 (2,5,8),
 (0,4,8),
 (2,4,6)]
+
+def printBoard(board):
+    spaces = board.split(",")
+    for row in range(int(len(spaces) / 3)):
+        for column in range(int(len(spaces) / 3)):
+            print(spaces[(row * 3) + column] + ",", end="")
+        print("")
 
 def findPlayer(board):
     x = 0
@@ -23,7 +37,15 @@ def findPlayer(board):
 
 def checkSolved(board):
     spaces = board.split(",")
-    print(spaces)
+
+    anyEmpty = False
+    for space in spaces:
+        if space == "_":
+            anyEmpty = True
+
+    if not anyEmpty:
+        return True
+
     for player in ["x","o"]:
         for clique in cliques:
             if spaces[clique[0]] == player and spaces[clique[1]] == player and spaces[clique[2]] == player:
@@ -31,9 +53,87 @@ def checkSolved(board):
 
     return False
 
+def checkPlayerSolved(board):
+    spaces = board.split(",")
+
+    anyEmpty = False
+    for space in spaces:
+        if space == "_":
+            anyEmpty = True
+
+    if not anyEmpty:
+        return True
+
+    for player in ["x","o"]:
+        for clique in cliques:
+            if spaces[clique[0]] == player and spaces[clique[1]] == player and spaces[clique[2]] == player:
+                return player
+
+    return False
+
 def findMoves(board):
     moves = []
     currentPlayer = findPlayer(board)
     spaces = board.split(",")
+    for space in range(len(spaces)):
+        if spaces[space] == "_":
+            newBoard = spaces[:]
+            newBoard[space] = currentPlayer
+            moves.append(",".join(newBoard))
 
-print(findPlayer("x,x,o,x,o,_,_,_,_"))
+    return moves
+
+def findPath(origins, end, start):
+    path = []
+    currentPoint = end
+    while currentPoint != start and origins[currentPoint] != 0:
+        path.insert(0,currentPoint)
+        currentPoint = origins[currentPoint]
+
+    if origins[currentPoint] != 0:
+        path.insert(0,start)
+        return path
+
+def findAllPossibleMoves(startingBoard):
+    frontier = [startingBoard]
+    seen = set()
+    origins = dict()
+    origins[startingBoard] = 0
+    numOfMoves = 0
+    allMoves = 0
+    possibleEnds = 0
+    possibleXWins = 0
+    possibleOWins = 0
+    possibleTies = 0
+    #allPaths = []
+    while len(frontier) > 0:
+        current = frontier.pop()[:]
+        if current not in seen:
+            seen = seen | {current}
+            allMoves += 1
+        if checkSolved(current):
+            possibleEnds += 1
+            #allPaths.append(findPath(origins,current,startingBoard))
+            if checkPlayerSolved(current) == "x":
+                possibleXWins += 1
+            elif checkPlayerSolved(current) == "o":
+                possibleOWins += 1
+            elif checkPlayerSolved(current) == True:
+                possibleTies += 1
+        else:
+            for move in findMoves(current):
+                origins[move] = current
+                frontier.append(move)
+                numOfMoves += 1
+
+    printBoard(startingBoard)
+    print("All possible boards from here: " + str(allMoves))
+    print("All possible games from here: " + str(possibleEnds))
+    print("All possible wins for X from here: " + str(possibleXWins))
+    print("All possible wins for O from here: " + str(possibleOWins))
+    print("All possible ties from here: " + str(possibleTies))
+    #print("All possible games from here: " + str(len(allPaths)))
+
+    return allMoves, possibleEnds, possibleXWins, possibleOWins, possibleTies
+
+print(findAllPossibleMoves("_,_,_,_,_,_,_,_,_"))
