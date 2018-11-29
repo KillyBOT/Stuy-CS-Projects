@@ -5,6 +5,9 @@ Created on Wed Nov 28 23:41:53 2018
 @author: edwar
 """
 
+import sys
+from random import choice
+
 cliques = [(0,1,2),
 (3,4,5),
 (6,7,8),
@@ -136,4 +139,50 @@ def findAllPossibleMoves(startingBoard):
 
     return allMoves, possibleEnds, possibleXWins, possibleOWins, possibleTies
 
+def findOutcome(startingBoard):
+    player = findPlayer(startingBoard)
+    frontier = [startingBoard]
+    possibleXWins = 0
+    possibleOWins = 0
+    possibleTies = 0
+    while len(frontier) > 0:
+        current = frontier.pop()[:]
+        if checkSolved(current):
+            if checkPlayerSolved(current) == "x":
+                possibleXWins += 1
+            elif checkPlayerSolved(current) == "o":
+                possibleOWins += 1
+            elif checkPlayerSolved(current) == True:
+                possibleTies += 1
+        else:
+            for move in findMoves(current):
+                frontier.append(move)
+
+    if player == "x":
+        return possibleXWins - possibleOWins
+    elif player == "o":
+        return possibleOWins - possibleXWins
+    else:
+        print("There was some sort of error")
+        return False
+
+def findBestMove(board):
+    if checkSolved(board):
+        print("Game is already done!")
+        return False
+    else:
+        moves = findMoves(board)
+        best = findOutcome(moves[0])
+        bestMove = [moves[0]]
+        for move in moves:
+            moveOutcome = findOutcome(move)
+            if moveOutcome < best:
+                best = moveOutcome
+                bestMove = [move]
+            elif moveOutcome == best:
+                bestMove.append(move)
+
+    return choice(bestMove)
+
 print(findAllPossibleMoves("_,_,_,_,_,_,_,_,_"))
+printBoard(findBestMove("_,_,_,_,_,_,_,_,_"))
