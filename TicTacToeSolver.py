@@ -7,6 +7,7 @@ Created on Wed Nov 28 23:41:53 2018
 
 import sys
 from random import choice
+from time import sleep
 
 cliques = [(0,1,2),
 (3,4,5),
@@ -16,6 +17,8 @@ cliques = [(0,1,2),
 (2,5,8),
 (0,4,8),
 (2,4,6)]
+
+emptyBoard = "_,_,_,_,_,_,_,_,_"
 
 def printBoard(board):
     spaces = board.split(",")
@@ -64,13 +67,13 @@ def checkPlayerSolved(board):
         if space == "_":
             anyEmpty = True
 
-    if not anyEmpty:
-        return True
-
     for player in ["x","o"]:
         for clique in cliques:
             if spaces[clique[0]] == player and spaces[clique[1]] == player and spaces[clique[2]] == player:
                 return player
+
+    if not anyEmpty:
+        return True
 
     return False
 
@@ -159,9 +162,9 @@ def findOutcome(startingBoard):
                 frontier.append(move)
 
     if player == "x":
-        return possibleXWins - possibleOWins
+        return possibleXWins - possibleOWins - possibleTies
     elif player == "o":
-        return possibleOWins - possibleXWins
+        return possibleOWins - possibleXWins - possibleTies
     else:
         print("There was some sort of error")
         return False
@@ -184,5 +187,16 @@ def findBestMove(board):
 
     return choice(bestMove)
 
-print(findAllPossibleMoves("_,_,_,_,_,_,_,_,_"))
-printBoard(findBestMove("_,_,_,_,_,_,_,_,_"))
+
+findAllPossibleMoves(emptyBoard)
+currentBoard = emptyBoard[:]
+while not checkSolved(currentBoard):
+    currentBoard = findBestMove(currentBoard)
+    printBoard(currentBoard)
+    print("")
+    sleep(1)
+
+if checkPlayerSolved(currentBoard) == True:
+    print("Tie!")
+else:
+    print(checkPlayerSolved(currentBoard) + " wins!")

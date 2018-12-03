@@ -2,7 +2,8 @@
 
 Wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
 
-AllBoards = {} 
+AllBoards = {}
+seenBoards = set()
 
 class BoardNode:
     def __init__(self,layout):
@@ -33,21 +34,29 @@ def findPlayer(layout):
         return "o"
     elif numOfX == numOfO:
         return "x"
-    
+
+def findWin(layout):
+    for player in ["x","o"]:
+        for win in Wins:
+            if layout[win[0]] == player and layout[win[1]] == player and layout[win[2]] == player:
+                return player
+    return False
 
 def CreateAllBoards(layout,parent):
-    if layout not in AllBoards:
+    if layout not in seenBoards:
         AllBoards[layout] = BoardNode(layout)
         player = findPlayer(layout)
-        if player != False:
+        ifWin = findWin(layout)
+        if player != False and ifWin == False:
             for place in range(len(layout)):
                 if layout[place] == "_":
                     layoutCopy = list(layout)
                     layoutCopy[place] = player
-                    print(layoutCopy)
                     AllBoards[layout].children.append("".join(layoutCopy))
                     CreateAllBoards("".join(layoutCopy),layout)
-                    
+        elif ifWin != False:
+            AllBoards[layout].endState = ifWin
+
     AllBoards[layout].parents.append(parent)
 
 CreateAllBoards("_________",None)
