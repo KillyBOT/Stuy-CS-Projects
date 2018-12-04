@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Dec  3 16:21:37 2018
+
+@author: edwar
+"""
+
 import sys
 
 class Board(object):
@@ -8,6 +15,7 @@ class Board(object):
     #False is x, true is o
 
     firstPlayer = False
+    playersDict = {False:"x",True:"o"}
     players = ["x","o"]
 
     def setEmpty(self):
@@ -37,7 +45,7 @@ class Board(object):
                 if self.rawData[row][column] == None:
                     retString.append(str(0))
                 else:
-                    retString.append(str(self.players[int(self.rawData[row][column])]))
+                    retString.append(self.playersDict[self.rawData[row][column]])
 
         return "".join(retString)
 
@@ -45,7 +53,8 @@ class Board(object):
         stringToPrint = str(self)
         for row in range(self.rows):
             for column in range(self.columns):
-                print(stringToPrint[(row*self.rows) + column],end=" ")
+                #print((row*self.rows) + column)
+                print(stringToPrint[(row*self.columns) + column],end=" ")
             print("")
 
     def findCurrentPlayer(self):
@@ -69,23 +78,51 @@ class Board(object):
     def checkWinPos(self, row, column):
         player = self.rawData[row][column]
         if player == None:
-            return False
+            return None
 
         directions = [[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1]]
         directionsCheck = [True, True, True, True, True, True, True, True]
         for out in range(4):
             for direction in range(len(directions)):
-                toCheck = []
-                if row + (directions[direction][0] * out) >= 0 and row + (directions[direction][0]) < len(self.rows):
-                    toCheck.append(row + (directions[direction][0] * out))
-                if column + (directions[direction][1] * out) >= 0 and column + (directions[direction][1] < len(self.columns)):
-                    toCheck.append((directions[direction]))
-
-                if len(toCheck) == 2:
-                    
-
-
-
+                toCheckRow = None
+                toCheckColumn = None
+                if row + (directions[direction][0] * out) >= 0 and row + (directions[direction][0] * out) < self.rows:
+                    toCheckRow = row + (directions[direction][0] * out)
+                if column + (directions[direction][1] * out) >= 0 and column + (directions[direction][1] * out) < self.columns:
+                    toCheckColumn = column + (directions[direction][1] * out)
+                                
+                if toCheckRow == None or toCheckColumn == None:
+                    directionsCheck[direction] = False
+                elif self.rawData[toCheckRow][toCheckColumn] != player:
+                    directionsCheck[direction] = False
+        for item in directionsCheck:
+            if item == True:
+                return player
+            
+        return None
+    
+    def checkWin(self):
+        for row in range(self.rows):
+            for column in range(self.columns):
+                win = self.checkWinPos(row, column)
+                if win != None:
+                    return win
+        return None
+        
+    def play(self, column):
+        player = self.findCurrentPlayer()
+        if self.rawData[0][column] != None:
+            return False
+        for row in range(self.rows):
+            if row + 1 >= self.rows:
+                self.rawData[row][column] = player
+                return True
+            elif self.rawData[row + 1][column] != None:
+                self.rawData[row][column] = player
+                return True
 testBoard = Board(7,9,"x")
+
+def calculateHeuristics(board,player)
+
 testBoard.printBoard()
-print(testBoard.findCurrentPlayer())
+print(testBoard.checkWin())
