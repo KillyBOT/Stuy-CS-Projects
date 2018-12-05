@@ -90,7 +90,7 @@ class Board(object):
                     toCheckRow = row + (directions[direction][0] * out)
                 if column + (directions[direction][1] * out) >= 0 and column + (directions[direction][1] * out) < self.columns:
                     toCheckColumn = column + (directions[direction][1] * out)
-                                
+
                 if toCheckRow == None or toCheckColumn == None:
                     directionsCheck[direction] = False
                 elif self.rawData[toCheckRow][toCheckColumn] != player:
@@ -98,17 +98,23 @@ class Board(object):
         for item in directionsCheck:
             if item == True:
                 return player
-            
+
         return None
-    
+
     def checkWin(self):
+        anyEmpty = False
         for row in range(self.rows):
             for column in range(self.columns):
+                if self.rawData[row][column] == None:
+                    anyEmpty = True
                 win = self.checkWinPos(row, column)
                 if win != None:
                     return win
+
+        if anyEmpty == False:
+            return 2
         return None
-        
+
     def play(self, column):
         player = self.findCurrentPlayer()
         if self.rawData[0][column] != None:
@@ -120,9 +126,53 @@ class Board(object):
             elif self.rawData[row + 1][column] != None:
                 self.rawData[row][column] = player
                 return True
+
+def calcScorePos(board, row, column):
+    player = board.rawData[row][column]
+    finalScore = 0
+    if player == None:
+        return finalScore
+    directions = {(0,-1):0,
+    (-1,-1):0,
+    (-1,0):0,
+    (-1,1):0,
+    (0,1):0,
+    (1,1):0,
+    (1,0):0,
+    (1,-1):0}
+    for direction in directions:
+        for out in range(4):
+            if row+(out*direction[0]) >= 0 and row+(out*direction[0]) < board.rows and column+(out*direction[1]) >= 0 and column+(out*direction[1]) < board.columns:
+                if board.rawData[row+(out*direction[0])][column+(out*direction[1])] == None:
+                    if row+(out*direction[0])+1 < board.rows:
+                        if board.rawData[row+(out*direction[0])+1][column+(out*direction[1])] == None:
+                            directions[direction] = 0
+                            break
+                elif board.rawData[row+(out*direction[0])][column+(out*direction[1])] == (not player):
+                    directions[direction] = 0
+                    break
+                else:
+                    directions[direction] += 1
+            else:
+                directions[direction] = 0
+                break
+
+    for direction in directions:
+        print(directions[direction])
+        finalScore += directions[direction]
+
+    return finalScore
+
 testBoard = Board(7,9,"x")
 
-def calculateHeuristics(board,player)
+testBoard.play(4)
+testBoard.play(5)
+testBoard.play(4)
+testBoard.play(5)
+testBoard.play(4)
+testBoard.play(5)
+testBoard.play(4)
 
 testBoard.printBoard()
 print(testBoard.checkWin())
+print(calcScorePos(testBoard,6,4))
