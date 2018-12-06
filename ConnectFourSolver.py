@@ -130,49 +130,93 @@ class Board(object):
 def calcScorePos(board, row, column):
     player = board.rawData[row][column]
     finalScore = 0
+
     if player == None:
         return finalScore
+
     directions = {(0,-1):0,
-    (-1,-1):0,
-    (-1,0):0,
-    (-1,1):0,
     (0,1):0,
+    (-1,0):0,
+    (-1,-1):0,
     (1,1):0,
-    (1,0):0,
+    (-1,1):0,
     (1,-1):0}
-    for direction in directions:
-        for out in range(4):
-            if row+(out*direction[0]) >= 0 and row+(out*direction[0]) < board.rows and column+(out*direction[1]) >= 0 and column+(out*direction[1]) < board.columns:
-                if board.rawData[row+(out*direction[0])][column+(out*direction[1])] == None:
-                    if row+(out*direction[0])+1 < board.rows:
-                        if board.rawData[row+(out*direction[0])+1][column+(out*direction[1])] == None:
-                            directions[direction] = 0
-                            break
-                elif board.rawData[row+(out*direction[0])][column+(out*direction[1])] == (not player):
-                    directions[direction] = 0
-                    break
-                else:
-                    directions[direction] += 1
-            else:
-                directions[direction] = 0
-                break
 
     for direction in directions:
-        print(directions[direction])
+        for out in range(1,4):
+
+            rowPos = row+(out*direction[0])
+            colPos = column+(out*direction[1])
+
+            if rowPos >= 0 and rowPos < board.rows and rowPos >= 0 and rowPos < board.columns:
+                if board.rawData[rowPos][colPos] == None:
+                    if board.rawData[rowPos-direction[0]][colPos-direction[1]] == None:
+                        break
+
+                    else:
+                        if rowPos+1 < board.rows:
+                            if board.rawData[rowPos+1][colPos] == None:
+                                directions[direction] = 0
+                                break
+
+                            else:
+                                directions[direction] += 1
+
+                        elif rowPos+1 == board.rows:
+                            directions[direction] += 1
+
+                        else:
+                            break
+
+                elif board.rawData[rowPos][colPos] == (not player):
+                    directions[direction] = 0
+                    break
+
+                else:
+                    directions[direction] += 1
+
+            else:
+                break
+
+    print(directions)
+    for direction in directions:
         finalScore += directions[direction]
 
     return finalScore
+
+def calcScore(board, player):
+
+    finalScore = 0
+
+    for row in range(board.rows):
+        for column in range(board.columns):
+            if board.rawData[row][column] == player:
+                finalScore += calcScorePos(board, row, column)
+            elif board.rawData[row][column] == (not player):
+                finalScore -= calcScorePos(board, row, column)
+
+    return finalScore
+
+def minSearch(board, player, depth, maxdepth):
+    if depth >= maxdepth:
+        return calcScore(testBoard, player)
+
+    else:
+        moves = []
+        for column in board.columns:
+            newBoard = board
+            if
 
 testBoard = Board(7,9,"x")
 
 testBoard.play(4)
 testBoard.play(5)
 testBoard.play(4)
-testBoard.play(5)
-testBoard.play(4)
-testBoard.play(5)
-testBoard.play(4)
+#testBoard.play(5)
+testBoard.play(3)
+#testBoard.play(5)
 
 testBoard.printBoard()
 print(testBoard.checkWin())
-print(calcScorePos(testBoard,6,4))
+print(calcScore(testBoard,False))
+print(calcScore(testBoard,True))
