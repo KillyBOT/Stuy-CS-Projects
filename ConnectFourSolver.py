@@ -8,6 +8,7 @@ Created on Mon Dec  3 16:21:37 2018
 import sys
 from copy import deepcopy
 from time import sleep
+from math import inf
 
 class Board(object):
     rawData = []
@@ -33,9 +34,9 @@ class Board(object):
         self.rows = rows
         self.columns = columns
         if firstPlayer == "x":
-            firstPlayer = False
+            self.firstPlayer = False
         elif firstPlayer == "o":
-            firstPlayer = True
+            self.firstPlayer = True
 
         self.setEmpty()
 
@@ -173,9 +174,9 @@ def calcScorePos(board, row, column):
                 directions[direction] = 0
                 break
     for direction in directions:
-        if directions[direction] == 3:
-            finalScore += 10
-        else:
+        #if directions[direction] == 3:
+            #finalScore += 30
+        #else:
             finalScore += directions[direction]
 
     return finalScore
@@ -189,8 +190,7 @@ def calcScore(board, player):
                 finalScore += calcScorePos(board, row, column)
             elif board.rawData[row][column] == (not player):
                 finalScore -= calcScorePos(board, row, column)
-    #board.printBoard()
-    #print(finalScore,end="\n\n")
+
     return finalScore
 
 def minSearch(board, player, depth, maxdepth):
@@ -216,9 +216,7 @@ def maxSearch(board, player, depth, maxdepth):
         moves = []
         for column in range(board.columns):
             newBoard = deepcopy(board)
-            #newBoard.printBoard()
             if newBoard.play(column) == True:
-                #newBoard.printBoard()
                 moves.append(minSearch(newBoard,player,depth+1,maxdepth))
 
         return max(moves)
@@ -232,21 +230,82 @@ def minMaxSearch(board, player, maxdepth):
 
     return max(moves)[1]
 
-testBoard = Board(7,9,"x")
+def alphaBetaMinSearch(board, player, depth, maxdepth, alpha, beta):
 
-testBoard.printBoard()
-print(testBoard.checkWin())
-print(calcScore(testBoard,False))
-print(calcScore(testBoard,True))
-print(minMaxSearch(testBoard,False,5))
+    newAlpha = alpha
+    newBeta = beta
 
-currentPlayer = testBoard.firstPlayer
+    if depth >= maxdepth:
+        return calcScore(board, player)
 
-while testBoard.checkWin() == None:
-    testBoard.play(minMaxSearch(testBoard,currentPlayer,3))
+    else:
+        moves = []
+        for column in range(board.columns):
+            newBoard = deepcopy(board)
+            if newBoard.play(column) == True:
+                toAdd = alphaBetaMaxSearch(newBoard,player,depth+1,maxdepth,newAlpha,newBeta)
+                newBeta = toAdd
+                if newBeta <= newAlpha:
+                    return toAdd
+                moves.append(toAdd)
+
+        return min(moves)
+
+def alphaBetaMaxSearch(board, player, depth, maxdepth, alpha, beta):
+
+    newAlpha = alpha
+    newBeta = beta
+
+    if depth >= maxdepth:
+        return calcScore(board, player)
+
+    else:
+        moves = []
+        for column in range(board.columns):
+            newBoard = deepcopy(board)
+            if newBoard.play(column) == True:
+                toAdd = alphaBetaMinSearch(newBoard,player,depth+1,maxdepth,newAlpha,newBeta)
+                newAlpha = toAdd
+                if newBeta <= newAlpha:
+                    return toAdd
+                moves.append(toAdd)
+
+        return max(moves)
+
+def alphaBetaSearch(board, player, maxdepth):
+    moves = []
+    for column in range(board.columns):
+        newBoard = deepcopy(board)
+        if newBoard.play(column) == True:
+            moves.append((alphaBetaMinSearch(newBoard,player,1,maxdepth,-inf,inf),column))
+
+    return max(moves)[1]
+
+if __name__== "__main__":
+
+    numOfRows = 7
+    numOfColumns = 9
+    startingPlayer = "x"
+
+    if len(sys.argv) > 3:
+
+        numOfRows = int(sys.argv[1])
+        numOfColumns = int(sys.argv[2])
+        startingPlayer = str(sys.argv[3])
+        if startingPlayer not in {"x","o"}:
+            print("The starting player needs to be either x or o!")
+
+    testBoard = Board(numOfRows,numOfColumns,startingPlayer)
+
     testBoard.printBoard()
-    currentPlayer = not currentPlayer
-    #sleep(2)
 
-print(testBoard.checkWin())
-testBoard.printBoard()
+    currentPlayer = testBoard.firstPlayer
+
+    while testBoard.checkWin() == None:
+        testBoard.play(alphaBetaSearch(testBoard,currentPlayer,6))
+        testBoard.printBoard()
+        currentPlayer = not currentPlayer
+        sleep(0.5)
+
+    print(testBoard.checkWin())
+    testBoard.printBoard()
