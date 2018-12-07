@@ -6,6 +6,8 @@ Created on Mon Dec  3 16:21:37 2018
 """
 
 import sys
+from copy import deepcopy
+from time import sleep
 
 class Board(object):
     rawData = []
@@ -56,6 +58,7 @@ class Board(object):
                 #print((row*self.rows) + column)
                 print(stringToPrint[(row*self.columns) + column],end=" ")
             print("")
+        print()
 
     def findCurrentPlayer(self):
         numOfOne = 0
@@ -148,26 +151,17 @@ def calcScorePos(board, row, column):
             rowPos = row+(out*direction[0])
             colPos = column+(out*direction[1])
 
-            if rowPos >= 0 and rowPos < board.rows and rowPos >= 0 and rowPos < board.columns:
+            if rowPos >= 0 and rowPos < board.rows and colPos >= 0 and colPos < board.columns:
                 if board.rawData[rowPos][colPos] == None:
                     if board.rawData[rowPos-direction[0]][colPos-direction[1]] == None:
                         break
-
                     else:
                         if rowPos+1 < board.rows:
                             if board.rawData[rowPos+1][colPos] == None:
                                 directions[direction] = 0
                                 break
-
                             else:
-                                directions[direction] += 1
-
-                        elif rowPos+1 == board.rows:
-                            directions[direction] += 1
-
-                        else:
-                            break
-
+                                pass
                 elif board.rawData[rowPos][colPos] == (not player):
                     directions[direction] = 0
                     break
@@ -176,16 +170,17 @@ def calcScorePos(board, row, column):
                     directions[direction] += 1
 
             else:
+                directions[direction] = 0
                 break
-
-    print(directions)
     for direction in directions:
-        finalScore += directions[direction]
+        if directions[direction] == 3:
+            finalScore += 10
+        else:
+            finalScore += directions[direction]
 
     return finalScore
 
 def calcScore(board, player):
-
     finalScore = 0
 
     for row in range(board.rows):
@@ -194,29 +189,64 @@ def calcScore(board, player):
                 finalScore += calcScorePos(board, row, column)
             elif board.rawData[row][column] == (not player):
                 finalScore -= calcScorePos(board, row, column)
-
+    #board.printBoard()
+    #print(finalScore,end="\n\n")
     return finalScore
 
 def minSearch(board, player, depth, maxdepth):
+
     if depth >= maxdepth:
-        return calcScore(testBoard, player)
+        return calcScore(board, player)
 
     else:
         moves = []
-        for column in board.columns:
-            newBoard = board
-            if
+        for column in range(board.columns):
+            newBoard = deepcopy(board)
+            if newBoard.play(column) == True:
+                moves.append(maxSearch(newBoard,player,depth+1,maxdepth))
+
+        return min(moves)
+
+def maxSearch(board, player, depth, maxdepth):
+
+    if depth >= maxdepth:
+        return calcScore(board, player)
+
+    else:
+        moves = []
+        for column in range(board.columns):
+            newBoard = deepcopy(board)
+            #newBoard.printBoard()
+            if newBoard.play(column) == True:
+                #newBoard.printBoard()
+                moves.append(minSearch(newBoard,player,depth+1,maxdepth))
+
+        return max(moves)
+
+def minMaxSearch(board, player, maxdepth):
+    moves = []
+    for column in range(board.columns):
+        newBoard = deepcopy(board)
+        if newBoard.play(column) == True:
+            moves.append((minSearch(newBoard,player,1,maxdepth),column))
+
+    return max(moves)[1]
 
 testBoard = Board(7,9,"x")
-
-testBoard.play(4)
-testBoard.play(5)
-testBoard.play(4)
-#testBoard.play(5)
-testBoard.play(3)
-#testBoard.play(5)
 
 testBoard.printBoard()
 print(testBoard.checkWin())
 print(calcScore(testBoard,False))
 print(calcScore(testBoard,True))
+print(minMaxSearch(testBoard,False,5))
+
+currentPlayer = testBoard.firstPlayer
+
+while testBoard.checkWin() == None:
+    testBoard.play(minMaxSearch(testBoard,currentPlayer,3))
+    testBoard.printBoard()
+    currentPlayer = not currentPlayer
+    #sleep(2)
+
+print(testBoard.checkWin())
+testBoard.printBoard()
