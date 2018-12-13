@@ -1,3 +1,5 @@
+package ConnectFour;
+
 import java.io.*;
 
 public class Board {
@@ -42,6 +44,19 @@ public class Board {
       System.out.println("");
     }
     System.out.println("");
+  }
+
+  public String getBoardString(){
+    String retString = "";
+    retString = retString + Integer.toString(this.rows);
+    retString = retString + Integer.toString(this.columns);
+    for(int row = 0; row < this.rows; row++){
+      for(int column = 0; column < this.columns; column++){
+        retString = retString + Integer.toString(this.rawData[row][column]);
+      }
+    }
+
+    return retString;
   }
 
   public int getPlayer(){
