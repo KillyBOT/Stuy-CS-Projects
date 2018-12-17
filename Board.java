@@ -2,7 +2,7 @@ package ConnectFour;
 
 import java.io.*;
 
-public class Board {
+public class Board implements java.io.Serializable{
   private int [][] rawData;
   private int startingPlayer;
   private int rows;

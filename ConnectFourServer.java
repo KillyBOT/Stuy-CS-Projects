@@ -28,10 +28,13 @@ public class ConnectFourServer extends Thread{
         DataInputStream in = new DataInputStream(server.getInputStream());
         System.out.println(in);
 
-        System.out.println(in.readUTF());
+        //System.out.println(in.readUTF());
         DataOutputStream out = new DataOutputStream(server.getOutputStream());
+        ObjectOutputStream outObj = new ObjectOutputStream(out);
+        outObj.writeObject(currentBoard);
+        outObj.close();
 
-        out.writeUTF(currentBoard.getBoardString());
+        //out.writeUTF(currentBoard.getBoardString());
         server.close();
 
 
