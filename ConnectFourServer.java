@@ -10,14 +10,13 @@ public class ConnectFourServer extends Thread{
 
   public ConnectFourServer(int port, int boardRows, int boardCols, int startingPlayer) throws IOException {
     serverSocket = new ServerSocket(port);
-    serverSocket.setSoTimeout(100000);
+    serverSocket.setSoTimeout(10000000);
 
     currentBoard = new Board(boardRows, boardCols, startingPlayer);
   }
 
   public void run() {
-    boolean running = true;
-    while(running) {
+    while(true){
       try {
         currentBoard.printBoard();
         System.out.println("Connect four server started on port " + serverSocket.getLocalPort());
@@ -25,29 +24,37 @@ public class ConnectFourServer extends Thread{
         Socket server = serverSocket.accept();
 
         System.out.println("Now connected to " + server.getRemoteSocketAddress());
-        DataInputStream in = new DataInputStream(server.getInputStream());
-        System.out.println(in);
+        DataInputStream checkIn = new DataInputStream(server.getInputStream());
+        System.out.println(checkIn.readUTF());
 
-        //System.out.println(in.readUTF());
-        DataOutputStream out = new DataOutputStream(server.getOutputStream());
-        ObjectOutputStream outObj = new ObjectOutputStream(out);
-        outObj.writeObject(currentBoard);
-        outObj.close();
+        boolean running = true;
 
-        //out.writeUTF(currentBoard.getBoardString());
+        while(running) {
+          DataOutputStream out = new DataOutputStream(server.getOutputStream());
+          ObjectOutputStream outObj = new ObjectOutputStream(out);
+          outObj.writeObject(currentBoard);
+
+          DataInputStream in = new DataInputStream(server.getInputStream());
+          ObjectInputStream objIn = new ObjectInputStream(in);
+          currentBoard = (Board) objIn.readObject();
+          currentBoard.printBoard();
+
+          if (currentBoard.checkWin() != 0) {
+            running = false;
+          }
+        }
         server.close();
-
 
       } catch (SocketTimeoutException s) {
         System.out.println("Socket timed out!");
-        running = false;
       } catch (IOException e) {
         e.printStackTrace();
-        running = false;
+      } catch (ClassNotFoundException c) {
+        System.out.println("Could not find class");
+        c.printStackTrace();
       }
     }
   }
-
   public static void main(String [] args){
     int connectionPort = Integer.parseInt(args[0]);
     int boardRows = Integer.parseInt(args[1]);
