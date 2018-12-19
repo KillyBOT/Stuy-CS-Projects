@@ -25,7 +25,7 @@ public class ConnectFourServer extends Thread{
 
         System.out.println("Now connected to " + server.getRemoteSocketAddress());
         DataInputStream checkIn = new DataInputStream(server.getInputStream());
-        System.out.println(checkIn.readUTF());
+        currentBoard.registerPlayer(checkIn.readUTF().charAt(0),0);
 
         boolean running = true;
 

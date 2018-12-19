@@ -8,7 +8,7 @@ public class Board implements java.io.Serializable{
   private int rows;
   private int columns;
 
-  private String[] playerDict = {"x","o"};
+  private char[] playerDict = {'x','o'};
 
   public Board(int rows, int columns, int startingPlayer){
     this.rows = rows;
@@ -38,7 +38,11 @@ public class Board implements java.io.Serializable{
   public void printBoard(){
     for(int row = 0; row < this.rows; row++){
       for(int column = 0; column < this.columns; column++){
-        System.out.print(this.rawData[row][column]);
+        if(this.rawData[row][column] > 0) {
+          System.out.print(this.playerDict[this.rawData[row][column]-1]);
+        } else {
+          System.out.print(this.rawData[row][column]);
+        }
         System.out.print(" ");
       }
       System.out.println("");
@@ -77,6 +81,18 @@ public class Board implements java.io.Serializable{
     } else {
       return (this.startingPlayer == 1) ? 2: 1;
     }
+  }
+
+  public int getPos(int row, int column) {
+    return this.rawData[row][column];
+  }
+
+  public int getRows() {
+    return this.rows;
+  }
+
+  public int getColumns() {
+    return this.columns;
   }
 
   public boolean play(int column){
@@ -138,6 +154,10 @@ public class Board implements java.io.Serializable{
       }
     }
     return (anyEmpty == false) ? 0: 3;
+  }
+
+  public void registerPlayer(char playerToken, int playerNum) {
+    this.playerDict[playerNum] = playerToken;
   }
 
 }
