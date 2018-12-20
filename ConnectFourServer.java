@@ -4,15 +4,21 @@ import java.io.*;
 import ConnectFour.Board.*;
 import java.net.*;
 
-public class ConnectFourServer extends Thread{
+class CFServer extends Thread{
   ServerSocket serverSocket;
   Board currentBoard;
+  private int boardRows;
+  private int boardCols;
+  private int startingPlayer;
 
-  public ConnectFourServer(int port, int boardRows, int boardCols, int startingPlayer) throws IOException {
+  public CFServer(int port, int boardRows, int boardCols, int startingPlayer) throws IOException {
     serverSocket = new ServerSocket(port);
     serverSocket.setSoTimeout(10000000);
 
-    currentBoard = new Board(boardRows, boardCols, startingPlayer);
+    this.boardRows = boardRows;
+    this.boardCols = boardCols;
+    this.startingPlayer = startingPlayer;
+    currentBoard = new Board(this.boardRows, this.boardCols, this.startingPlayer);
   }
 
   public void run() {
@@ -33,6 +39,7 @@ public class ConnectFourServer extends Thread{
           DataOutputStream out = new DataOutputStream(server.getOutputStream());
           ObjectOutputStream outObj = new ObjectOutputStream(out);
           outObj.writeObject(currentBoard);
+          outObj.flush();
 
           DataInputStream in = new DataInputStream(server.getInputStream());
           ObjectInputStream objIn = new ObjectInputStream(in);
@@ -40,6 +47,7 @@ public class ConnectFourServer extends Thread{
           currentBoard.printBoard();
 
           if (currentBoard.checkWin() != 0) {
+            currentBoard = new Board(this.boardRows, this.boardCols, this.startingPlayer);
             running = false;
           }
         }
@@ -55,6 +63,10 @@ public class ConnectFourServer extends Thread{
       }
     }
   }
+}
+
+public class ConnectFourServer{
+
   public static void main(String [] args){
     int connectionPort = Integer.parseInt(args[0]);
     int boardRows = Integer.parseInt(args[1]);
@@ -62,7 +74,7 @@ public class ConnectFourServer extends Thread{
     int startingPlayer = Integer.parseInt(args[3]);
 
     try {
-      Thread serverThread = new ConnectFourServer(connectionPort, boardRows, boardCols, startingPlayer);
+      Thread serverThread = new CFServer(connectionPort, boardRows, boardCols, 0);
       serverThread.start();
     } catch (IOException e) {
       e.printStackTrace();
