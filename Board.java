@@ -8,7 +8,10 @@ public class Board implements java.io.Serializable{
   private int rows;
   private int columns;
 
+  private boolean isOver;
+
   private char[] playerDict = {'x','o'};
+  private String[] playerNameDict = {"Player 1","Player 2"};
 
   public Board(int rows, int columns, int startingPlayer){
     this.rows = rows;
@@ -18,6 +21,7 @@ public class Board implements java.io.Serializable{
     } else {
       this.startingPlayer = startingPlayer;
     }
+    this.isOver = false;
     createEmptyData();
   }
 
@@ -32,7 +36,11 @@ public class Board implements java.io.Serializable{
   }
 
   public int [][] getRawData(){
-    return this.rawData;
+    return this.rawData.clone();
+  }
+
+  public int getStartingPlayer(){
+    return this.startingPlayer;
   }
 
   public void printBoard(){
@@ -41,14 +49,20 @@ public class Board implements java.io.Serializable{
         if(this.rawData[row][column] > 0) {
           System.out.print(this.playerDict[this.rawData[row][column]-1]);
         } else {
-          System.out.print(this.rawData[row][column]);
+          System.out.print(".");
         }
         System.out.print(" ");
       }
+      System.out.print(row);
       System.out.println("");
+    }
+
+    for(int column = 0; column < this.columns; column++){
+      System.out.print(Integer.toString(column) + " ");
     }
     System.out.println("");
   }
+
 
   public String getBoardString(){
     String retString = "";
@@ -95,7 +109,14 @@ public class Board implements java.io.Serializable{
     return this.columns;
   }
 
-  public boolean play(int column){
+  public boolean play(int colIn){
+    int column = colIn;
+    if(column < 0) {
+      column = 0;
+    } else if (column >= getRows()) {
+      column = getRows() - 1;
+    }
+    
     if(this.rawData[0][column] != 0) {
       return false;
     } else {
@@ -112,6 +133,34 @@ public class Board implements java.io.Serializable{
     }
     System.out.println("Dunno how this happened");
     return false;
+  }
+
+  public static boolean checkTheoretical(Board theoreticalBoard, int column){
+    if(theoreticalBoard.getRawData()[0][column] != 0) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  public static Board cloneBoard(Board inBoard) {
+    Board retBoard = null;
+    try {
+      ByteArrayOutputStream bout = new ByteArrayOutputStream();
+      ObjectOutputStream out = new ObjectOutputStream(bout);
+      out.writeObject(inBoard);
+      out.flush();
+      out.close();
+
+      ObjectInputStream in = new ObjectInputStream( new ByteArrayInputStream(bout.toByteArray()) );
+      retBoard = (Board) in.readObject();
+    } catch(IOException e) {
+      e.printStackTrace();
+    } catch(ClassNotFoundException c) {
+      c.printStackTrace();
+    }
+
+    return retBoard;
   }
 
   private int checkWinPos(int row, int column){
@@ -141,6 +190,10 @@ public class Board implements java.io.Serializable{
   }
 
   public int checkWin(){
+    if(isOver == true){
+      return 4;
+    }
+
     boolean anyEmpty = true;
     for(int row = 0; row < this.rows; row++) {
       for(int column = 0; column < this.columns; column++) {
@@ -156,8 +209,15 @@ public class Board implements java.io.Serializable{
     return (anyEmpty == false) ? 0: 3;
   }
 
+  public char getToken(int playerNum){
+    return this.playerDict[playerNum-1];
+  }
+
   public void registerPlayer(char playerToken, int playerNum) {
     this.playerDict[playerNum] = playerToken;
   }
 
+  public void setOver(boolean toSet){
+    this.isOver = toSet;
+  }
 }
