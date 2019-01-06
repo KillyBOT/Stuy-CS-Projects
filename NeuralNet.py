@@ -67,17 +67,17 @@ class NeuralNet(object):
 
         for layer in range(len(layerData)):
             self.layers.append(Layer(layer,layerData[layer]))
-
-        for layer in range(len(self.layers)-1):
+        self.links.append(0)
+        for layer in range(1,len(self.layers)):
             layerToAdd = []
-            for startPos in range(self.layers[layer].size):
-                startPosToAdd = []
-                for endPos in range(self.layers[layer+1].size):
+            for endPos in range(self.layers[layer].size):
+                endPosToAdd = []
+                for startPos in range(self.layers[layer-1].size):
                     #This is where the value of the links is initially set
                     #You should be able to access the links in the list by doing:
-                    # [starting neuron layer][starting neuron position][ending neuron position]
-                    startPosToAdd.append(random.uniform(-5,5))
-                layerToAdd.append(startPosToAdd)
+                    # [ending neuron layer][ending neuron position][starting neuron position]
+                    endPosToAdd.append(random.uniform(-5,5))
+                layerToAdd.append(endPosToAdd)
             self.links.append(layerToAdd)
 
     #This function sets the values of the starting neurons for propagation
@@ -135,13 +135,13 @@ class NeuralNet(object):
                 #Here's where we do the propagation
 
                 neuronVal = 0
-                neuronVal += self.layers[layer].bias
+                neuronVal += self.layers[layer-1].bias
 
                 #We are adding the bias to the final value
 
                 for startingNeuron in range(len(self.layers[layer-1].neurons)):
 
-                    neuronVal += self.layers[layer-1].neurons[startingNeuron].value * self.links[layer-1][startingNeuron][neuron]
+                    neuronVal += self.layers[layer-1].neurons[startingNeuron].value * self.links[layer][neuron][startingNeuron]
                     #Now, we sum the values of the neurons in the previous layer times their respective weight
 
                 #Finally, set the value of the neuron to the number computed above going through the sigmoid function
@@ -152,9 +152,9 @@ class NeuralNet(object):
     #I can't explain it in a comment, so go look at this video for some help:
     #https://www.youtube.com/watch?v=Ilg3gGewQ5U&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi&index=3
 
-    
+    #def getLinkImportance(self, linkLayer, linkStartingNeuron, linkEndingNeuron)
 
-    def backpropagation(self, outputData):
+    #def backpropagation(self, outputData):
 
 
 
