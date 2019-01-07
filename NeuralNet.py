@@ -7,6 +7,10 @@ import random
 def sigmoid(x):
     return 1 / (1 + exp(-x))
 
+#Get derivative of the sigmoid function
+def dSigmoid(x):
+    return (sig(x) * (1 - sig(x)))
+
 #This is just for making random test cases, at least for xor
 
 def makeXORTestcase(size):
@@ -95,6 +99,34 @@ class NeuralNet(object):
                 self.layers[0].neurons[pos].value = startingNeuronsData[dataPos]
         return True
 
+    #This sets the value of a specific neuron based on the previous neurons times their respective weights
+    #The neuron needs to not be an input neuron, and it needs to be inside the net
+
+    def getNeuronVal(self, neuronPos, neuronLayer):
+        if neuronLayer < 1 or neuronLayer >= len(self.layers):
+            return False
+
+        retVal = 0
+
+        #Add the bias
+        retVal += self.layers[neuronLayer].bias
+        for neuron in range(len(self.layers[neuronLayer - 1])):
+
+            #We add the values of the previous neurons times the weights assigned to them
+            retVal += self.layers[neuronLayer-1].neurons[neuron].value * self.links[neuronLayer][neuronPos][neuron]\
+
+        #Now, sigmoid the value and return
+        return sig(retVal)
+
+    #This is for finding the error of a specific neuron. As such, the desired output should be a single number as well
+    #Change this to calculate the error differently
+    #This also assumes that the neuron is in the last layer
+
+    def getError(self, neuronPos, desiredOutput):
+        if neuronPos >= len(self.layers[len(self.layers)-1].neurons):
+            return False
+        return pow((desiredOutput - self.layers[len(self.layers-1)].neurons[neuronPos].value),2)
+
     #This function gets the cost of the neural network, based on how close the output neurons are to the desired output
     #For now, the desired output is simply a list of eight ones or zeroes, since I'm testing the network with an XOR function
     #The code below should be altered if you plan on doing something different
@@ -116,7 +148,7 @@ class NeuralNet(object):
             #The way I am computing the cost is doing (expectedValue - currentValue) ^ 2
             #This can be changed, but keep in mind the backpropagation algorithm also needs to be changed
 
-            returnVal += pow((desiredOutput[outputNeuron] - self.layers[len(self.layers)-1].neurons[outputNeuron].value ),2)
+            returnVal += self.getError(outputNeuron, )
 
         return returnVal
 
@@ -134,28 +166,24 @@ class NeuralNet(object):
 
                 #Here's where we do the propagation
 
-                neuronVal = 0
-                neuronVal += self.layers[layer-1].bias
 
-                #We are adding the bias to the final value
-
-                for startingNeuron in range(len(self.layers[layer-1].neurons)):
-
-                    neuronVal += self.layers[layer-1].neurons[startingNeuron].value * self.links[layer][neuron][startingNeuron]
                     #Now, we sum the values of the neurons in the previous layer times their respective weight
 
                 #Finally, set the value of the neuron to the number computed above going through the sigmoid function
-                self.layers[layer].neurons[neuron].value = sigmoid(neuronVal)
+                self.layers[layer].neurons[neuron].value = self.getNeuronVal(neuron, layer)
 
 
     #These are the backpropagation functions, the heart of the neural net.
     #I can't explain it in a comment, so go look at this video for some help:
     #https://www.youtube.com/watch?v=Ilg3gGewQ5U&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi&index=3
 
-    #def getLinkImportance(self, linkLayer, linkStartingNeuron, linkEndingNeuron)
+    def findLayerError(self, outputData, layerNum):
+        errorList = []
+        if layerNum == len(self.layers) - 1:
+            for neuron in range(len(self.layers[layerNum].neurons)):
+                retList.append( (2 * (outputData[neuron] - self.layers[layerNum].neurons[neuron].value)) * dSigmoid(self.getNeuronVal(neuron, layerNum)) )
 
     #def backpropagation(self, outputData):
-
 
 
 
