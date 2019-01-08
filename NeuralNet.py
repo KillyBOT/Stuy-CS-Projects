@@ -9,7 +9,7 @@ def sigmoid(x):
 
 #Get derivative of the sigmoid function
 def dSigmoid(x):
-    return (sig(x) * (1 - sig(x)))
+    return (sigmoid(x) * (1 - sigmoid(x)))
 
 #This is just for making random test cases, at least for xor
 
@@ -110,13 +110,13 @@ class NeuralNet(object):
 
         #Add the bias
         retVal += self.layers[neuronLayer].bias
-        for neuron in range(len(self.layers[neuronLayer - 1])):
+        for neuron in range(len(self.layers[neuronLayer - 1].neurons)):
 
             #We add the values of the previous neurons times the weights assigned to them
             retVal += self.layers[neuronLayer-1].neurons[neuron].value * self.links[neuronLayer][neuronPos][neuron]\
 
         #Now, sigmoid the value and return
-        return sig(retVal)
+        return sigmoid(retVal)
 
     #This is for finding the error of a specific neuron. As such, the desired output should be a single number as well
     #Change this to calculate the error differently
@@ -150,7 +150,7 @@ class NeuralNet(object):
 
             returnVal += self.getError(outputNeuron, )
 
-        return returnVal
+        return returnVal / 2
 
     #This function does all the actual propagation for one test case. The training data is a tuple that looks like: (input data, desired output data)
     def propagation(self, inputData):
@@ -179,9 +179,30 @@ class NeuralNet(object):
 
     def findLayerError(self, outputData, layerNum):
         errorList = []
-        if layerNum == len(self.layers) - 1:
+        if layerNum >= len(self.layers) - 1:
             for neuron in range(len(self.layers[layerNum].neurons)):
-                retList.append( (2 * (outputData[neuron] - self.layers[layerNum].neurons[neuron].value)) * dSigmoid(self.getNeuronVal(neuron, layerNum)) )
+                #The error for a specific node is the dell cost over dell neuron value times dell sigmoid over dell value
+                errorList.append( ((outputData[neuron] - self.layers[layerNum].neurons[neuron].value)) * dSigmoid(self.getNeuronVal(neuron, layerNum)) )
+
+        else:
+
+            #You can recursively find the error by finding the error of the layer in front and multiplying that by the values of the links
+            #The weights are multiplied by the sum of all the links going to the next layer times the error of their respective node
+            errorToMultiply = self.findLayerError(outputData, layerNum + 1)
+            weightMatrix = []
+            for neuron in range(len(self.layers[layerNum].neurons)):
+                finalToAdd = 0
+                for endNeuron in range(len(self.layers[layerNum+1].neurons)):
+                    finalToAdd += errorToMultiply[endNeuron]*self.links[layerNum + 1][endNeuron][neuron]
+                weightMatrix.append(finalToAdd)
+
+            #Now, do the hadamard product of the new weight matrix transposed witht the
+            for item in range(len(weightMatrixTransposed)):
+                errorList.append(weightMatrix[item] * dSigmoid(self.getNeuronVal(layerNum,item)))
+
+        return errorList
+
+
 
     #def backpropagation(self, outputData):
 
@@ -252,3 +273,4 @@ if __name__ == "__main__":
         testingTestCases.append(makeXORTestcase(outputSize))
 
     print(testNet.getAccuracy(testingTestCases))
+    print(testNet.findLayerError(testingTestCases[0][1],2))
