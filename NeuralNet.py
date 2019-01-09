@@ -50,6 +50,7 @@ class Neuron(object):
 
     def __init__(self):
         self.value = 0
+        self.bias = random.uniform(-1,1)
 
 #This is a class that represents a layer. Again, it's mainly for organization. It contains neurons, and a bias node. Note that links are not included
 #The layer num is which layer it is, and the size is how many neurons are in the layer
@@ -60,7 +61,6 @@ class Layer(object):
         self.layerNum = layerNum
         self.size = size
         self.neurons = []
-        self.bias = random.uniform(-5,5)
 
         for pos in range(self.size):
             self.neurons.append(Neuron())
@@ -92,7 +92,7 @@ class NeuralNet(object):
                     #This is where the value of the links is initially set
                     #You should be able to access the links in the list by doing:
                     # [ending neuron layer][ending neuron position][starting neuron position]
-                    endPosToAdd.append(random.uniform(-5,5))
+                    endPosToAdd.append(random.uniform(-1,1))
                 layerToAdd.append(endPosToAdd)
             self.links.append(layerToAdd)
 
@@ -111,24 +111,29 @@ class NeuralNet(object):
                 self.layers[0].neurons[pos].value = startingNeuronsData[dataPos]
         return True
 
-    #This sets the value of a specific neuron based on the previous neurons times their respective weights
-    #The neuron needs to not be an input neuron, and it needs to be inside the net
-
-    def getNeuronVal(self, neuronPos, neuronLayer):
+    #This gets the sum of all the weights times their respective neurons plus the bias
+    #This will be squished by the sigmoid function
+    def z(self, neuronPos, neuronLayer):
         if neuronLayer < 1 or neuronLayer >= len(self.layers):
             return False
 
         retVal = 0
 
         #Add the bias
-        retVal += self.layers[neuronLayer].bias
+        retVal += self.layers[neuronLayer].neurons[neuronPos].bias
         for neuron in range(len(self.layers[neuronLayer - 1].neurons)):
 
             #We add the values of the previous neurons times the weights assigned to them
             retVal += self.layers[neuronLayer-1].neurons[neuron].value * self.links[neuronLayer][neuronPos][neuron]
 
         #Now, sigmoid the value and return
-        return sigmoid(retVal)
+        return retVal
+
+    #This sets the value of a specific neuron based on the previous neurons times their respective weights
+    #The neuron needs to not be an input neuron, and it needs to be inside the net
+
+    def getNeuronVal(self, neuronPos, neuronLayer):
+        return sigmoid(self.z(neuronPos, neuronLayer))
 
     #This is for finding the error of a specific neuron. As such, the desired output should be a single number as well
     #Change this to calculate the error differently
@@ -161,7 +166,7 @@ class NeuralNet(object):
             #This can be changed, but keep in mind the backpropagation algorithm also needs to be changed
             returnVal += self.getError(outputNeuron, desiredOutput[outputNeuron])
 
-        return returnVal / 2
+        return returnVal / (2 * finalLayerNeurons)
 
     #This function does all the actual propagation for one test case. The training data is a tuple that looks like: (input data, desired output data)
     def propagation(self, inputData):
@@ -176,9 +181,7 @@ class NeuralNet(object):
             for neuron in range(len(self.layers[layer].neurons)):
 
                 #Here's where we do the propagation
-
-
-                    #Now, we sum the values of the neurons in the previous layer times their respective weight
+                #Now, we sum the values of the neurons in the previous layer times their respective weight
 
                 #Finally, set the value of the neuron to the number computed above going through the sigmoid function
                 self.layers[layer].neurons[neuron].value = self.getNeuronVal(neuron, layer)
@@ -194,7 +197,8 @@ class NeuralNet(object):
         if layerNum >= len(self.layers) - 1:
             for neuron in range(len(self.layers[layerNum].neurons)):
                 #The error for a specific node is the dell cost over dell neuron value times dell sigmoid over dell value
-                errorList.append( ((outputData[neuron] - self.layers[layerNum].neurons[neuron].value)) * dSigmoid(self.getNeuronVal(neuron, layerNum)) )
+
+                errorList.append( ((self.layers[layerNum].neurons[neuron].value) - outputData[neuron]) * dSigmoid(self.z(neuron, layerNum)) )
 
         else:
 
@@ -210,7 +214,7 @@ class NeuralNet(object):
 
             #Now, do the hadamard product of the new weight matrix transposed witht the
             for item in range(len(weightMatrix)):
-                errorList.append(weightMatrix[item] * dSigmoid(self.getNeuronVal(layerNum,item)))
+                errorList.append(weightMatrix[item] * dSigmoid(self.z(item,layerNum)))
 
         return errorList
 
@@ -226,13 +230,15 @@ class NeuralNet(object):
 
         #First, the biases. This is actually pretty easy, since the error itself is literally the gradient.
         for layer in range(1,len(self.layers)):
-            self.layers[layer].bias -= avg(error[layer]) * self.learningRate
+            for neuron in range(len(self.layers[layer].neurons)):
+                self.layers[layer].neurons[neuron].bias -= error[layer][neuron] * self.learningRate
 
+        #Next, the weights
         for layer in range(1,len(self.layers)):
             for endNeuronError in range(len(self.links[layer])):
                 for startNeuron in range(len(self.links[layer][endNeuronError])):
                     #The rate of change for the links is the k value times j's error
-                    self.links[layer][endNeuronError][startNeuron] -= (error[layer][endNeuronError] * self.layers[layer-1].neurons[startNeuron].value) * self.learningRate
+                    self.links[layer][endNeuronError][startNeuron] -= (error[layer][endNeuronError] * self.getNeuronVal(startNeuron,layer-1)) * self.learningRate
 
 
     #This just trains for one test case. Use this if you want scholastic descent
@@ -293,7 +299,11 @@ class NeuralNet(object):
 
         timesRight = 0
         for case in range(self.epochSize):
-            if trainingData[case][1] == self.computeAnswer(trainingData[case][0]):
+            anyWrong = False
+            for item in range(len(trainingData[case][1])):
+                if trainingData[case][1][item] != self.computeAnswer(trainingData[case][0])[item]:
+                    anyWrong = True
+            if anyWrong == False:
                 timesRight += 1
 
         return timesRight / self.epochSize
@@ -301,18 +311,21 @@ class NeuralNet(object):
 
 if __name__ == "__main__":
 
-    outputSize = 4
-    lengthOfEpoch = 100
+    outputSize = 1
+    inputSize = outputSize * 2
+    lengthOfEpoch = 1000
     batchesPerEpoch = 10
-    learningRate = 0.5
+    learningRate = 1
+    neuronsPerLayer = [inputSize, 4, outputSize]
 
-    testNet = NeuralNet([outputSize * 2, outputSize, outputSize, outputSize, outputSize], learningRate, lengthOfEpoch, batchesPerEpoch)
+    testNet = NeuralNet(neuronsPerLayer, learningRate, lengthOfEpoch, batchesPerEpoch)
 
     testingTestCases = []
 
     finalTestCase = makeXORTestcase(outputSize)
     testingTestCases = makeXORTestcases(testNet.epochSize,outputSize)
     print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
-    for x in range(10000):
-        testNet.trainEpoch(makeXORTestcases(testNet.epochSize,outputSize))
-    print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
+    while(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)) < 0.6):
+        for x in range(testNet.epochSize):
+            testNet.trainOnce(makeXORTestcase(outputSize))
+        print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
