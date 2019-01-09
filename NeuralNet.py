@@ -11,6 +11,10 @@ def sigmoid(x):
 def dSigmoid(x):
     return (sigmoid(x) * (1 - sigmoid(x)))
 
+#Just an average function. No literally, it finds the mean of a list
+def avg(x):
+    return sum(x) / float(len(x))
+
 #This is just for making random test cases, at least for xor
 
 def makeXORTestcase(size):
@@ -31,6 +35,14 @@ def makeXORTestcase(size):
 
     firstInput.extend(secondInput)
     return (firstInput,output)
+
+#This function makes a bunch of test cases for the xor function
+def makeXORTestcases(totalSize,caseSize):
+    output = []
+    for case in range(totalSize):
+        output.append(makeXORTestcase(caseSize))
+
+    return output
 
 #This class represents the neurons in the network. It's mainly for organization.
 
@@ -113,7 +125,7 @@ class NeuralNet(object):
         for neuron in range(len(self.layers[neuronLayer - 1].neurons)):
 
             #We add the values of the previous neurons times the weights assigned to them
-            retVal += self.layers[neuronLayer-1].neurons[neuron].value * self.links[neuronLayer][neuronPos][neuron]\
+            retVal += self.layers[neuronLayer-1].neurons[neuron].value * self.links[neuronLayer][neuronPos][neuron]
 
         #Now, sigmoid the value and return
         return sigmoid(retVal)
@@ -125,7 +137,7 @@ class NeuralNet(object):
     def getError(self, neuronPos, desiredOutput):
         if neuronPos >= len(self.layers[len(self.layers)-1].neurons):
             return False
-        return pow((desiredOutput - self.layers[len(self.layers-1)].neurons[neuronPos].value),2)
+        return pow((desiredOutput - self.layers[len(self.layers)-1].neurons[neuronPos].value),2)
 
     #This function gets the cost of the neural network, based on how close the output neurons are to the desired output
     #For now, the desired output is simply a list of eight ones or zeroes, since I'm testing the network with an XOR function
@@ -147,8 +159,7 @@ class NeuralNet(object):
 
             #The way I am computing the cost is doing (expectedValue - currentValue) ^ 2
             #This can be changed, but keep in mind the backpropagation algorithm also needs to be changed
-
-            returnVal += self.getError(outputNeuron, )
+            returnVal += self.getError(outputNeuron, desiredOutput[outputNeuron])
 
         return returnVal / 2
 
@@ -177,6 +188,7 @@ class NeuralNet(object):
     #I can't explain it in a comment, so go look at this video for some help:
     #https://www.youtube.com/watch?v=Ilg3gGewQ5U&list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi&index=3
 
+    #This function finds the error of each neuron in a specific layer
     def findLayerError(self, outputData, layerNum):
         errorList = []
         if layerNum >= len(self.layers) - 1:
@@ -197,27 +209,37 @@ class NeuralNet(object):
                 weightMatrix.append(finalToAdd)
 
             #Now, do the hadamard product of the new weight matrix transposed witht the
-            for item in range(len(weightMatrixTransposed)):
+            for item in range(len(weightMatrix)):
                 errorList.append(weightMatrix[item] * dSigmoid(self.getNeuronVal(layerNum,item)))
 
         return errorList
 
+    #This function finds the error of each neuron in the network.
+    def findTotalError(self, desiredOutput):
+        errorList = [0]
+        for layer in range(1,len(self.layers)):
+            errorList.append(self.findLayerError(desiredOutput,layer))
 
+        return errorList
 
-    #def backpropagation(self, outputData):
+    def backpropagate(self, error):
 
+        #First, the biases. This is actually pretty easy, since the error itself is literally the gradient.
+        for layer in range(1,len(self.layers)):
+            self.layers[layer].bias -= avg(error[layer]) * self.learningRate
 
-
-
-
-
+        for layer in range(1,len(self.layers)):
+            for endNeuronError in range(len(self.links[layer])):
+                for startNeuron in range(len(self.links[layer][endNeuronError])):
+                    #The rate of change for the links is the k value times j's error
+                    self.links[layer][endNeuronError][startNeuron] -= (error[layer][endNeuronError] * self.layers[layer-1].neurons[startNeuron].value) * self.learningRate
 
 
     #This just trains for one test case. Use this if you want scholastic descent
 
     def trainOnce(self, trainingData):
         self.propagation(trainingData[0])
-        return self.computeCost(trainingData[1])
+        self.backpropagate(self.findTotalError(trainingData[1]))
 
     #This will do a whole bunch of training, giving you the average cost in the end
     #Keep in mind that this doesn't use batches, and is here just for fun
@@ -225,14 +247,32 @@ class NeuralNet(object):
     def trainEpoch(self,trainingData):
         finalVal = 0
 
-        if len(trainingData) != self.epochSize:
+        if len(trainingData) < self.epochSize:
             print("The amount of training data must be at least as big as the size of the epoch")
+        else:
+            errorList = []
+            for iteration in range(self.epochSize):
+                errorListToAdd = []
+                self.propagation(trainingData[iteration][0])
+                errorListToAdd = self.findTotalError(trainingData[iteration][1])
+                if len(errorList) == 0:
+                    errorList = errorListToAdd
+                else:
+                    for layer in range(1,len(errorList)):
+                        for neuron in range(len(errorList[layer])):
+                            errorList[layer][neuron] += errorListToAdd[layer][neuron]
+                            errorList[layer][neuron] /= 2
 
-        for iteration in range(self.epochSize):
+            self.backpropagate(errorList)
 
-            finalVal += self.trainOnce(trainingData[iteration])
+    #This function trains an epoch in batches. Use this one since it's the best of both worlds
+    def trainBatch(self, trainingData):
+        if len(trainingData) < self.epochSize:
+            print("There in not enough training data for one epoch")
 
-        return finalVal / self.epochSize
+        #else:
+            #for batch in range(self.epochSize / self.batchesPerEpoch):
+
 
     #Once you have trained your neural net, this will be the function that will tell you your answer
     #Of course, you should change this so that it returns a value that suits you.
@@ -266,11 +306,13 @@ if __name__ == "__main__":
     batchesPerEpoch = 10
     learningRate = 0.5
 
-    testNet = NeuralNet([outputSize * 2,outputSize,outputSize], learningRate, lengthOfEpoch, batchesPerEpoch)
+    testNet = NeuralNet([outputSize * 2, outputSize, outputSize, outputSize, outputSize], learningRate, lengthOfEpoch, batchesPerEpoch)
 
     testingTestCases = []
-    for case in range(testNet.epochSize):
-        testingTestCases.append(makeXORTestcase(outputSize))
 
-    print(testNet.getAccuracy(testingTestCases))
-    print(testNet.findLayerError(testingTestCases[0][1],2))
+    finalTestCase = makeXORTestcase(outputSize)
+    testingTestCases = makeXORTestcases(testNet.epochSize,outputSize)
+    print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
+    for x in range(10000):
+        testNet.trainEpoch(makeXORTestcases(testNet.epochSize,outputSize))
+    print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
