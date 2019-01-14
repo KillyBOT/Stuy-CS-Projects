@@ -1,6 +1,7 @@
 import sys
 from math import exp
 import random
+from time import sleep
 
 #Sigmoid function
 
@@ -50,7 +51,10 @@ class Neuron(object):
 
     def __init__(self):
         self.value = 0
-        self.bias = random.uniform(-1,1)
+        self.bias = random.uniform(-0.1,0.1)
+
+    def __str__(self):
+        return str(self.value)
 
 #This is a class that represents a layer. Again, it's mainly for organization. It contains neurons, and a bias node. Note that links are not included
 #The layer num is which layer it is, and the size is how many neurons are in the layer
@@ -92,7 +96,7 @@ class NeuralNet(object):
                     #This is where the value of the links is initially set
                     #You should be able to access the links in the list by doing:
                     # [ending neuron layer][ending neuron position][starting neuron position]
-                    endPosToAdd.append(random.uniform(-1,1))
+                    endPosToAdd.append(random.uniform(-0.1,0.1))
                 layerToAdd.append(endPosToAdd)
             self.links.append(layerToAdd)
 
@@ -106,9 +110,8 @@ class NeuralNet(object):
             print("The input data and the neurons in the first layer must have the same size")
             return False
 
-        for dataPos in range(len(startingNeuronsData)):
-            for pos in range(len(self.layers[0].neurons)):
-                self.layers[0].neurons[pos].value = startingNeuronsData[dataPos]
+        for pos in range(len(self.layers[0].neurons)):
+            self.layers[0].neurons[pos].value = startingNeuronsData[pos]
         return True
 
     #This gets the sum of all the weights times their respective neurons plus the bias
@@ -166,7 +169,7 @@ class NeuralNet(object):
             #This can be changed, but keep in mind the backpropagation algorithm also needs to be changed
             returnVal += self.getError(outputNeuron, desiredOutput[outputNeuron])
 
-        return returnVal / (2 * finalLayerNeurons)
+        return returnVal
 
     #This function does all the actual propagation for one test case. The training data is a tuple that looks like: (input data, desired output data)
     def propagation(self, inputData):
@@ -198,7 +201,7 @@ class NeuralNet(object):
             for neuron in range(len(self.layers[layerNum].neurons)):
                 #The error for a specific node is the dell cost over dell neuron value times dell sigmoid over dell value
 
-                errorList.append( ((self.layers[layerNum].neurons[neuron].value) - outputData[neuron]) * dSigmoid(self.z(neuron, layerNum)) )
+                errorList.append( (outputData[neuron] - self.layers[layerNum].neurons[neuron].value) * ((self.layers[layerNum].neurons[neuron].value) * (1 - self.layers[layerNum].neurons[neuron].value)))
 
         else:
 
@@ -209,21 +212,20 @@ class NeuralNet(object):
             for neuron in range(len(self.layers[layerNum].neurons)):
                 finalToAdd = 0
                 for endNeuron in range(len(self.layers[layerNum+1].neurons)):
-                    finalToAdd += errorToMultiply[endNeuron]*self.links[layerNum + 1][endNeuron][neuron]
+                    finalToAdd += errorToMultiply[endNeuron]*self.links[layerNum+1][endNeuron][neuron]
                 weightMatrix.append(finalToAdd)
 
             #Now, do the hadamard product of the new weight matrix transposed witht the
             for item in range(len(weightMatrix)):
-                errorList.append(weightMatrix[item] * dSigmoid(self.z(item,layerNum)))
+                errorList.append(weightMatrix[item] * ((self.layers[layerNum].neurons[neuron].value) * (1 - self.layers[layerNum].neurons[neuron].value)))
 
         return errorList
 
     #This function finds the error of each neuron in the network.
     def findTotalError(self, desiredOutput):
         errorList = [0]
-        for layer in range(1,len(self.layers)):
-            errorList.append(self.findLayerError(desiredOutput,layer))
-
+        for layer in range(len(self.layers)-1,0,-1):
+            errorList.insert(1,self.findLayerError(desiredOutput,layer))
         return errorList
 
     def backpropagate(self, error):
@@ -231,15 +233,14 @@ class NeuralNet(object):
         #First, the biases. This is actually pretty easy, since the error itself is literally the gradient.
         for layer in range(1,len(self.layers)):
             for neuron in range(len(self.layers[layer].neurons)):
-                self.layers[layer].neurons[neuron].bias -= error[layer][neuron] * self.learningRate
+                self.layers[layer].neurons[neuron].bias += error[layer][neuron] * self.learningRate
 
         #Next, the weights
-        for layer in range(1,len(self.layers)):
+        for layer in range(1,len(self.links)):
             for endNeuronError in range(len(self.links[layer])):
                 for startNeuron in range(len(self.links[layer][endNeuronError])):
                     #The rate of change for the links is the k value times j's error
-                    self.links[layer][endNeuronError][startNeuron] -= (error[layer][endNeuronError] * self.getNeuronVal(startNeuron,layer-1)) * self.learningRate
-
+                    self.links[layer][endNeuronError][startNeuron] += (error[layer][endNeuronError] * self.layers[layer-1].neurons[startNeuron].value) * self.learningRate
 
     #This just trains for one test case. Use this if you want scholastic descent
 
@@ -250,26 +251,17 @@ class NeuralNet(object):
     #This will do a whole bunch of training, giving you the average cost in the end
     #Keep in mind that this doesn't use batches, and is here just for fun
 
-    def trainEpoch(self,trainingData):
-        finalVal = 0
-
+    def trainEpoch(self, trainingData):
         if len(trainingData) < self.epochSize:
             print("The amount of training data must be at least as big as the size of the epoch")
         else:
-            errorList = []
-            for iteration in range(self.epochSize):
-                errorListToAdd = []
-                self.propagation(trainingData[iteration][0])
-                errorListToAdd = self.findTotalError(trainingData[iteration][1])
-                if len(errorList) == 0:
-                    errorList = errorListToAdd
-                else:
-                    for layer in range(1,len(errorList)):
-                        for neuron in range(len(errorList[layer])):
-                            errorList[layer][neuron] += errorListToAdd[layer][neuron]
-                            errorList[layer][neuron] /= 2
+            finalError = 0
+            for case in range(self.epochSize):
+                self.propagation(trainingData[case][0])
+                finalError += self.computeCost(trainingData[case][1])
+                self.backpropagate(self.findTotalError(trainingData[case][1]))
 
-            self.backpropagate(errorList)
+            print(finalError / self.epochSize)
 
     #This function trains an epoch in batches. Use this one since it's the best of both worlds
     def trainBatch(self, trainingData):
@@ -313,19 +305,15 @@ if __name__ == "__main__":
 
     outputSize = 1
     inputSize = outputSize * 2
-    lengthOfEpoch = 1000
+    lengthOfEpoch = 10000
     batchesPerEpoch = 10
     learningRate = 1
-    neuronsPerLayer = [inputSize, 4, outputSize]
+    neuronsPerLayer = [inputSize, inputSize, outputSize]
 
     testNet = NeuralNet(neuronsPerLayer, learningRate, lengthOfEpoch, batchesPerEpoch)
 
-    testingTestCases = []
-
-    finalTestCase = makeXORTestcase(outputSize)
-    testingTestCases = makeXORTestcases(testNet.epochSize,outputSize)
     print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
-    while(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)) < 0.6):
-        for x in range(testNet.epochSize):
-            testNet.trainOnce(makeXORTestcase(outputSize))
-        print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
+    while(True):
+        testNet.trainEpoch(makeXORTestcases(testNet.epochSize,outputSize))
+        #print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
+        #sleep(0.5)
