@@ -100,6 +100,12 @@ class NeuralNet(object):
                 layerToAdd.append(endPosToAdd)
             self.links.append(layerToAdd)
 
+    #This prints the weights of all the links in the network
+    def printLinks(self):
+        for layer in range(1,len(self.links)):
+            for endNeuron in range(len(self.links[layer])):
+                for startNeuron in range(len(self.links[layer][endNeuron])):
+                    print("Position: " + str([layer, endNeuron, startNeuron]) + "\tWeight: " + str(self.links[layer][endNeuron][startNeuron]))
     #This function sets the values of the starting neurons for propagation
 
     def setStartingNeurons(self, startingNeuronsData):
@@ -174,11 +180,11 @@ class NeuralNet(object):
     #This function does all the actual propagation for one test case. The training data is a tuple that looks like: (input data, desired output data)
     def propagation(self, inputData):
 
-        for layer in range(len(self.layers)):
-            self.layers[layer].clear()
+        #for layer in range(len(self.layers)):
+        #   self.layers[layer].clear()
 
         if self.setStartingNeurons(inputData) == False:
-            return False
+           return False
 
         for layer in range(1,len(self.layers)):
             for neuron in range(len(self.layers[layer].neurons)):
@@ -201,8 +207,9 @@ class NeuralNet(object):
             for neuron in range(len(self.layers[layerNum].neurons)):
                 #The error for a specific node is the dell cost over dell neuron value times dell sigmoid over dell value
 
-                errorList.append( (outputData[neuron] - self.layers[layerNum].neurons[neuron].value) * ((self.layers[layerNum].neurons[neuron].value) * (1 - self.layers[layerNum].neurons[neuron].value)))
+                errorList.append( (outputData[neuron] - self.layers[layerNum].neurons[neuron].value) * ( (self.layers[layerNum].neurons[neuron].value) * (1 - self.layers[layerNum].neurons[neuron].value) ) )
 
+            return errorList
         else:
 
             #You can recursively find the error by finding the error of the layer in front and multiplying that by the values of the links
@@ -213,19 +220,19 @@ class NeuralNet(object):
                 finalToAdd = 0
                 for endNeuron in range(len(self.layers[layerNum+1].neurons)):
                     finalToAdd += errorToMultiply[endNeuron]*self.links[layerNum+1][endNeuron][neuron]
-                weightMatrix.append(finalToAdd)
+                weightMatrix.append(finalToAdd * ( self.layers[layerNum].neurons[neuron].value * (1 - self.layers[layerNum].neurons[neuron].value) ))
 
             #Now, do the hadamard product of the new weight matrix transposed witht the
             for item in range(len(weightMatrix)):
-                errorList.append(weightMatrix[item] * ((self.layers[layerNum].neurons[neuron].value) * (1 - self.layers[layerNum].neurons[neuron].value)))
+                errorList.append( weightMatrix[item] )
 
-        return errorList
+            return errorList
 
     #This function finds the error of each neuron in the network.
     def findTotalError(self, desiredOutput):
         errorList = [0]
-        for layer in range(len(self.layers)-1,0,-1):
-            errorList.insert(1,self.findLayerError(desiredOutput,layer))
+        for layer in range(1,len(self.layers)):
+            errorList.append(self.findLayerError(desiredOutput,layer))
         return errorList
 
     def backpropagate(self, error):
@@ -236,9 +243,9 @@ class NeuralNet(object):
                 self.layers[layer].neurons[neuron].bias += error[layer][neuron] * self.learningRate
 
         #Next, the weights
-        for layer in range(1,len(self.links)):
-            for endNeuronError in range(len(self.links[layer])):
-                for startNeuron in range(len(self.links[layer][endNeuronError])):
+        for layer in range(1,len(self.layers)):
+            for endNeuronError in range(len(self.layers[layer].neurons)):
+                for startNeuron in range(len(self.layers[layer-1].neurons)):
                     #The rate of change for the links is the k value times j's error
                     self.links[layer][endNeuronError][startNeuron] += (error[layer][endNeuronError] * self.layers[layer-1].neurons[startNeuron].value) * self.learningRate
 
@@ -256,12 +263,17 @@ class NeuralNet(object):
             print("The amount of training data must be at least as big as the size of the epoch")
         else:
             finalError = 0
+            totalRight = 0
             for case in range(self.epochSize):
                 self.propagation(trainingData[case][0])
                 finalError += self.computeCost(trainingData[case][1])
+                #print(trainingData[case],self.computeAnswer(trainingData[case][0]),self.computeCost(trainingData[case][1]))
+                if (self.computeAnswer(trainingData[case][0]) == trainingData[case][1]):
+                    totalRight += 1
                 self.backpropagate(self.findTotalError(trainingData[case][1]))
 
-            print(finalError / self.epochSize)
+            print(finalError / self.epochSize, totalRight / self.epochSize)
+            self.printLinks()
 
     #This function trains an epoch in batches. Use this one since it's the best of both worlds
     def trainBatch(self, trainingData):
@@ -305,10 +317,10 @@ if __name__ == "__main__":
 
     outputSize = 1
     inputSize = outputSize * 2
-    lengthOfEpoch = 10000
+    lengthOfEpoch = 500
     batchesPerEpoch = 10
-    learningRate = 1
-    neuronsPerLayer = [inputSize, inputSize, outputSize]
+    learningRate = 0.5
+    neuronsPerLayer = [inputSize, inputSize*2, outputSize]
 
     testNet = NeuralNet(neuronsPerLayer, learningRate, lengthOfEpoch, batchesPerEpoch)
 
@@ -316,4 +328,4 @@ if __name__ == "__main__":
     while(True):
         testNet.trainEpoch(makeXORTestcases(testNet.epochSize,outputSize))
         #print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
-        #sleep(0.5)
+        sleep(0.5)
