@@ -2,11 +2,23 @@ import sys
 from math import exp
 import random
 from time import sleep
+from mnist import MNIST
+
+#Import the MNIST database
+
+mnistData = MNIST("MNISTSamples")
+images, labels = mnistData.load_training()
+testImages, testLabels = mnistData.load_testing()
 
 #Sigmoid function
 
 def sigmoid(x):
     return 1 / (1 + exp(-x))
+
+#ReLu function, which may be better I dunno
+
+def ReLu(x):
+    return max([0,x])
 
 #Get derivative of the sigmoid function
 def dSigmoid(x):
@@ -46,6 +58,37 @@ def makeXORTestcases(totalSize,caseSize):
     return output
 
 #This class represents the neurons in the network. It's mainly for organization.
+
+def makeMNISTTestcase(index):
+    retInput = []
+    retOutput = []
+    for pixel in range(len(images[index])):
+        retInput.append(images[index][pixel]/255)
+    for num in range(10):
+        if num == labels[index]:
+            retOutput.append(1)
+        else:
+            retOutput.append(0)
+
+    return (retInput,retOutput)
+
+def makeMNISTTestcases(epochSize):
+    dataSetSize = epochSize
+    if epochSize > len(images):
+        dataSetSize = len(images)
+
+    cases = []
+    allNums = []
+
+    for x in range(len(images)):
+        allNums.append(x)
+
+    for case in range(0,dataSetSize):
+        cases.append(makeMNISTTestcase(random.choice(allNums)))
+
+    random.shuffle(cases)
+
+    return cases
 
 class Neuron(object):
 
@@ -273,7 +316,7 @@ class NeuralNet(object):
                 self.backpropagate(self.findTotalError(trainingData[case][1]))
 
             print(finalError / self.epochSize, totalRight / self.epochSize)
-            self.printLinks()
+            #self.printLinks()
 
     #This function trains an epoch in batches. Use this one since it's the best of both worlds
     def trainBatch(self, trainingData):
@@ -298,6 +341,16 @@ class NeuralNet(object):
 
         return retList
 
+    #This gives you the raw values of the output neurons, which you can interpret however you want, making this more flexible
+
+    def getAnswer(self, inputData):
+        self.propagation(inputData)
+        retList = []
+        for neuron in self.layers[len(self.layers)-1].neurons:
+            retList.append(neuron.value)
+
+        return retList
+
     #Returns the amount that the network got right over the total amount of training data
     def getAccuracy(self, trainingData):
 
@@ -315,17 +368,17 @@ class NeuralNet(object):
 
 if __name__ == "__main__":
 
-    outputSize = 1
-    inputSize = outputSize * 2
-    lengthOfEpoch = 500
+    outputSize = 10
+    inputSize = 784
+    lengthOfEpoch = 250
     batchesPerEpoch = 10
     learningRate = 0.5
-    neuronsPerLayer = [inputSize, inputSize*2, outputSize]
+    neuronsPerLayer = [inputSize, 16, 16, outputSize]
 
     testNet = NeuralNet(neuronsPerLayer, learningRate, lengthOfEpoch, batchesPerEpoch)
 
-    print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
+    #testCases = makeMNISTTestcases(lengthOfEpoch)
+
     while(True):
-        testNet.trainEpoch(makeXORTestcases(testNet.epochSize,outputSize))
-        #print(testNet.getAccuracy(makeXORTestcases(testNet.epochSize,outputSize)))
-        sleep(0.5)
+        testNet.trainEpoch(makeMNISTTestcases(testNet.epochSize))
+        #sleep(0.5)
