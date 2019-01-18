@@ -316,13 +316,13 @@ class NeuralNet(object):
             for case in range(self.epochSize):
                 self.propagation(trainingData[case][0])
                 finalError += self.computeCost(trainingData[case][1])
-                #print(trainingData[case],self.computeAnswer(trainingData[case][0]),self.computeCost(trainingData[case][1]))
+                #print(trainingData[case][1],self.getAnswer())
                 if (self.computeAnswer(trainingData[case][0]) == trainingData[case][1]):
                     totalRight += 1
                 self.backpropagate(self.findTotalError(trainingData[case][1]))
 
             return (totalRight / self.epochSize)
-            
+
 
     #This function trains an epoch in batches. Use this one since it's the best of both worlds
     def batchDescent(self, trainingData):
