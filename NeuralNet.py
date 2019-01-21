@@ -1,6 +1,7 @@
 import sys
 from math import exp
 import random
+import numpy as np
 
 #Sigmoid function
 
@@ -12,42 +13,25 @@ def sigmoid(x):
 def ReLu(x):
     return max([0,x])
 
+#Leaky ReLu
+
+def leakyReLu(x):
+    return x if x > 0 else 0.01*x
+
 #Get derivative of the sigmoid function
 def dSigmoid(x):
     return (sigmoid(x) * (1 - sigmoid(x)))
 
+def dReLu(x):
+    return 1 if x > 0 else 0
+
+#Derivative of leaky ReLu
+def dLeakyReLu(x):
+    return 1 if x > 0 else 0.01
+
 #Just an average function. No literally, it finds the mean of a list
 def avg(x):
     return sum(x) / float(len(x))
-
-#This is just for making random test cases, at least for xor
-
-def makeXORTestcase(size):
-    firstInput = []
-    secondInput = []
-    output = []
-
-    for place in range(size):
-        firstToAdd = random.randint(0,1)
-        secondToAdd = random.randint(0,1)
-        outputToAdd = 0
-        if firstToAdd != secondToAdd:
-            outputToAdd = 1
-
-        firstInput.append(firstToAdd)
-        secondInput.append(secondToAdd)
-        output.append(outputToAdd)
-
-    firstInput.extend(secondInput)
-    return (firstInput,output)
-
-#This function makes a bunch of test cases for the xor function
-def makeXORTestcases(totalSize,caseSize):
-    output = []
-    for case in range(totalSize):
-        output.append(makeXORTestcase(caseSize))
-
-    return output
 
 #This class represents the neurons in the network. It's mainly for organization.
 
@@ -80,7 +64,7 @@ class Layer(object):
 
 #This is the actual neural net class, and is what does the propagation
 
-class NeuralNet(object):
+class NeuralNetOld(object):
 
     def __init__(self, layerData, learningRate, epochSize, batchesPerEpoch):
         self.layers = []
@@ -88,6 +72,8 @@ class NeuralNet(object):
         self.learningRate = learningRate
         self.epochSize = epochSize
         self.batchesPerEpoch = batchesPerEpoch
+        self.activationType = leakyReLu
+        self.dActivationType = dLeakyReLu
 
         for layer in range(len(layerData)):
             self.layers.append(Layer(layer,layerData[layer]))
@@ -110,6 +96,15 @@ class NeuralNet(object):
             for endNeuron in range(len(self.links[layer])):
                 for startNeuron in range(len(self.links[layer][endNeuron])):
                     print("Position: " + str([layer, endNeuron, startNeuron]) + "\tWeight: " + str(self.links[layer][endNeuron][startNeuron]))
+    
+    #This allows you to change the activation function of the network
+    #It also requires that you put in a derivative function as well
+
+    def changeActivation(newActivationType, newActivationTypeDerivative):
+        self.activationType = newActivationType
+        self.dActivationType = newActivationTypeDerivative
+
+
     #This function sets the values of the starting neurons for propagation
 
     def setStartingNeurons(self, startingNeuronsData):
@@ -146,7 +141,7 @@ class NeuralNet(object):
     #The neuron needs to not be an input neuron, and it needs to be inside the net
 
     def getNeuronVal(self, neuronPos, neuronLayer):
-        return sigmoid(self.z(neuronPos, neuronLayer))
+        return self.activationType(self.z(neuronPos, neuronLayer))
 
     #This is for finding the error of a specific neuron. As such, the desired output should be a single number as well
     #Change this to calculate the error differently
@@ -184,8 +179,8 @@ class NeuralNet(object):
     #This function does all the actual propagation for one test case. The training data is a tuple that looks like: (input data, desired output data)
     def propagation(self, inputData):
 
-        #for layer in range(len(self.layers)):
-        #   self.layers[layer].clear()
+        for layer in range(len(self.layers)):
+            self.layers[layer].clear()
 
         if self.setStartingNeurons(inputData) == False:
            return False
@@ -198,7 +193,6 @@ class NeuralNet(object):
 
                 #Finally, set the value of the neuron to the number computed above going through the sigmoid function
                 self.layers[layer].neurons[neuron].value = self.getNeuronVal(neuron, layer)
-
 
     #This gives you the raw values of the output neurons, which you can interpret however you want, making this more flexible
 
@@ -221,7 +215,7 @@ class NeuralNet(object):
             for neuron in range(len(self.layers[layerNum].neurons)):
                 #The error for a specific node is the dell cost over dell neuron value times dell sigmoid over dell value
 
-                errorList.append( (outputData[neuron] - self.layers[layerNum].neurons[neuron].value) * ( (self.layers[layerNum].neurons[neuron].value) * (1 - self.layers[layerNum].neurons[neuron].value) ) )
+                errorList.append( 2 * (outputData[neuron] - self.layers[layerNum].neurons[neuron].value) * ( self.dActivationType(self.z(neuron,layerNum)) ))
 
             return errorList
         else:
@@ -234,7 +228,7 @@ class NeuralNet(object):
                 finalToAdd = 0
                 for endNeuron in range(len(self.layers[layerNum+1].neurons)):
                     finalToAdd += errorToMultiply[endNeuron]*self.links[layerNum+1][endNeuron][neuron]
-                weightMatrix.append(finalToAdd * ( self.layers[layerNum].neurons[neuron].value * (1 - self.layers[layerNum].neurons[neuron].value) ))
+                weightMatrix.append(finalToAdd * ( self.dActivationType(self.z(neuron,layerNum)) ))
 
             #Now, do the hadamard product of the new weight matrix transposed witht the
             for item in range(len(weightMatrix)):
@@ -242,7 +236,7 @@ class NeuralNet(object):
 
             return errorList
 
-     #This function finds the error of each neuron in a specific layer based on given outputs
+    #This function finds the error of each neuron in a specific layer based on given outputs
     def findLayerErrorStatic(self, outputData, desiredOutput, layerNum):
         errorList = []
         if layerNum >= len(self.layers) - 1:
@@ -263,6 +257,31 @@ class NeuralNet(object):
                 for endNeuron in range(len(self.layers[layerNum+1].neurons)):
                     finalToAdd += errorToMultiply[endNeuron]*self.links[layerNum+1][endNeuron][neuron]
                 weightMatrix.append(finalToAdd * ( self.layers[layerNum].neurons[neuron].value * (1 - self.layers[layerNum].neurons[neuron].value) ))
+
+            #Now, do the hadamard product of the new weight matrix transposed witht the
+            for item in range(len(weightMatrix)):
+                errorList.append( weightMatrix[item] )
+
+            return errorList
+        errorList = []
+        if layerNum >= len(self.layers) - 1:
+            for neuron in range(len(self.layers[layerNum].neurons)):
+                #The error for a specific node is the dell cost over dell neuron value times dell sigmoid over dell value
+
+                errorList.append( (outputData[neuron] - self.layers[layerNum].neurons[neuron].value) * ( self.dActivationType(self.z(neuron,layerNum)) ) )
+
+            return errorList
+        else:
+
+            #You can recursively find the error by finding the error of the layer in front and multiplying that by the values of the links
+            #The weights are multiplied by the sum of all the links going to the next layer times the error of their respective node
+            errorToMultiply = self.findLayerError(outputData, layerNum + 1)
+            weightMatrix = []
+            for neuron in range(len(self.layers[layerNum].neurons)):
+                finalToAdd = 0
+                for endNeuron in range(len(self.layers[layerNum+1].neurons)):
+                    finalToAdd += errorToMultiply[endNeuron]*self.links[layerNum+1][endNeuron][neuron]
+                weightMatrix.append(finalToAdd * ( squishDer(self.z(neuron,layerNum)) ))
 
             #Now, do the hadamard product of the new weight matrix transposed witht the
             for item in range(len(weightMatrix)):
@@ -315,8 +334,9 @@ class NeuralNet(object):
             totalRight = 0
             for case in range(self.epochSize):
                 self.propagation(trainingData[case][0])
-                finalError += self.computeCost(trainingData[case][1])
                 #print(trainingData[case][1],self.getAnswer())
+
+                finalError += self.computeCost(trainingData[case][1])
                 if (self.computeAnswer(trainingData[case][0]) == trainingData[case][1]):
                     totalRight += 1
                 self.backpropagate(self.findTotalError(trainingData[case][1]))
@@ -366,12 +386,14 @@ class NeuralNet(object):
         #Here's the stuff you want to change
         retList = []
         for neuron in self.layers[len(self.layers)-1].neurons:
-            retList.append(round(neuron.value))
+            valToAppend = round(neuron.value) if neuron.value < 1 else 1
+            retList.append(valToAppend)
 
         return retList
 
     #Get the strongest of the ending neurons
-    def getStrongestOutputNeuron(self):
+    def getStrongestOutputNeuron(self, inputData):
+        self.propagation(inputData)
         highestPos = 0
         highestVal = 0
         for neuron in range(len(self.layers[len(self.layers)-1].neurons)):
@@ -446,5 +468,184 @@ class NeuralNet(object):
                     currentPlace += 1
                 layerToAdd.append(endNeuronToAdd)
             self.links.append(layerToAdd)
+
+        toRead.close()
+
+#I'm working on using numpy for this neural network
+#I won't comment since it has the exact same structure as above, just using different data representations
+
+class NeuralNet(object):
+
+    def __init__(self, layerData, learningRate, epochSize, batchesPerEpoch):
+        self.learningRate = learningRate
+        self.epochSize = epochSize
+        self.batchesPerEpoch = batchesPerEpoch
+        self.activationType = leakyReLu
+        self.dActivationType = dLeakyReLu
+        self.neurons = []
+        self.links = [0]
+        self.biases = [0]
+
+        self.activationType = np.vectorize(self.activationType)
+        self.dActivationType = np.vectorize(self.dActivationType)
+
+        self.layerSize = len(layerData)
+
+        for layer in range(len(layerData)):
+            self.neurons.append(np.zeros((layerData[layer])))
+
+        for layer in range(1,len(layerData)):
+            self.biases.append(np.random.random((layerData[layer])) - 0.5)
+            self.links.append(np.random.random((layerData[layer],layerData[layer-1])) - 0.5)
+
+        #print(self.neurons, self.links, self.biases)
+
+
+    def printLinks(self):
+        print("Layers of links: " + str(len(self.links)))
+        print("Link values: (end neuron layer, end neuron position, start neuron position")
+        print(self.links)
+
+    #For this, just make sure you are including a numpy array of the same size as the inputs
+    def setInputNeurons(self, dataIn):
+
+        self.neurons[0] *= 0
+
+        if dataIn.size != self.neurons[0].size:
+            print(dataIn.size, self.neurons[0].size)
+            print("Error: wrong input size")
+
+        else:
+            self.neurons[0] += dataIn
+
+    def z(self, layer):
+        return (self.links[layer] @ self.neurons[layer-1]) + self.biases[layer]
+
+    #def getNeuronVal(self, neuronLayer, neuronPos):
+    #    return self.activationType(self.z(neuronLayer,neuronPos))
+
+    #Again, make sure that your desired output is also a numpy array with the same size as the outputs
+    def getCost(self, desiredOutput):
+        return (np.array(desiredOutput) - self.neurons[-1]) ** 2
+
+    def propagate(self, inputData):
+
+        self.setInputNeurons(np.array(inputData))
+
+        for layer in range(1,self.layerSize):
+            self.neurons[layer] = self.activationType(self.z(layer))
+
+    def getAnswersRaw(self):
+        return self.neurons[-1]
+
+    def getStrongestOutputNeuron(self):
+        highestPos = 0
+        highestVal = 0
+        for neuron in range(self.neurons[-1].size):
+            if self.neurons[-1][neuron] > highestVal:
+                highestPos = neuron
+                highestVal = self.neurons[-1][neuron]
+
+        return highestPos
+
+    def getAnswers(self):
+        retList = np.zeros((self.neurons[-1].size))
+        retList[self.getStrongestOutputNeuron()] = 1
+        return retList
+
+    def backpropagate(self, outputData):
+
+        errorArray = [0]
+
+        errorArray.append( (2 * (np.array(outputData) - self.neurons[-1])) * self.dActivationType(self.z(self.layerSize-1)) )
+
+        for layer in range(self.layerSize-2,0,-1):
+            errorArray.insert(1, (np.transpose(self.links[layer+1]) @ errorArray[1]) * self.dActivationType(self.z(layer)) )
+
+        """print(outputData)
+        print()
+        print(self.getAnswers())
+        print()
+        print(errorArray)
+        print()
+        print(self.neurons)
+        print()
+        self.printLinks()
+        print("\n")"""
+
+        for layer in range(1,self.layerSize):
+            self.biases[layer] += (errorArray[layer] * self.learningRate)
+            for endNeuron in range(self.neurons[layer].size):
+                self.links[layer][endNeuron] += (self.neurons[layer-1] * errorArray[layer][endNeuron]) * self.learningRate
+
+    def trainOnce(self, data):
+        self.propagate(data[0])
+        self.backpropagate(data[1])
+
+    def scholasticDescent(self, data):
+        if len(data) != self.epochSize:
+            print("Error: wrong data amount! Have as much data as the size of your epoch")
+        else:
+            totalRight = 0
+            totalError = 0
+            for case in data:
+                self.propagate(case[0])
+                if np.array_equal(self.getAnswers(),np.array(case[1])):
+                    totalRight += 1
+                totalError += sum(self.getCost(case[1]))
+                self.backpropagate(case[1])
+
+
+            return totalRight / self.epochSize
+
+    def export(self, filename):
+        toWrite = open(filename,"w")
+        toWrite.write(str(self.learningRate)+"\n")
+        toWrite.write(str(self.epochSize)+"\n")
+        toWrite.write(str(self.batchesPerEpoch)+"\n")
+
+        toWrite.write(str(self.layerSize))
+        for layer in range(self.layerSize):
+            toWrite.write("\n" + str(self.neurons[layer].size))
+
+        for layer in range(1,self.layerSize):
+            for endNeuron in range(self.neurons[layer].size):
+                toWrite.write("\n" + str(self.biases[layer][endNeuron]))
+                for startNeuron in range(self.neurons[layer-1].size):
+                    toWrite.write("\n" + str(self.links[layer][endNeuron][startNeuron]))
+
+        toWrite.close()
+
+    def read(self, filename):
+        toRead = open(filename, "r")
+        
+        toReadList = toRead.read().split("\n")
+
+        self.learningRate = float(toReadList[0])
+        self.epochSize = int(toReadList[1])
+        self.batchesPerEpoch = int(toReadList[2])
+
+        self.neurons = []
+        self.links = [0]
+        self.biases = [0]
+
+        currentPlace = 4
+
+        for layer in range(int(toReadList[3])):
+            self.neurons.append(np.zeros((int(toReadList[currentPlace]))))
+            currentPlace += 1
+
+        self.layerSize = len(self.neurons)
+
+        for layer in range(1,self.layerSize):
+            self.links.append(np.zeros((self.neurons[layer].size,self.neurons[layer-1].size)))
+            self.biases.append(np.zeros((self.neurons[layer].size)))
+
+            for endNeuron in range(self.neurons[layer].size):
+                self.biases[layer][endNeuron] = float(toReadList[currentPlace])
+                currentPlace += 1
+                for startNeuron in range(self.neurons[layer-1].size):
+                    self.links[layer][endNeuron][startNeuron] = float(toReadList[currentPlace])
+                    currentPlace += 1
 
         toRead.close()
